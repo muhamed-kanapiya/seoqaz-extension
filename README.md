@@ -1,0 +1,1 @@
+# seoqaz-extension

@@ -107,7 +107,6 @@ seoqaz-extension/
 ├── popup.html          # Extension popup UI
 ├── popup.css           # Popup styling
 ├── popup.js            # Popup logic and SEO analysis
-├── content.js          # Content script (runs on web pages)
 ├── icons/              # Extension icons
 │   ├── icon16.png
 │   ├── icon48.png

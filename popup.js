@@ -37,9 +37,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function displayResults(data) {
+    // Ensure data properties exist with defaults
+    const title = data.title || '';
+    const metaDescription = data.metaDescription || '';
+    
     // Title Tag Analysis
     const titleInfo = document.getElementById('title-info');
-    const titleLength = data.title.length;
+    const titleLength = title.length;
     let titleStatus = '';
     if (titleLength === 0) {
       titleStatus = '<span class="status-error">❌ Missing</span>';
@@ -51,14 +55,14 @@ document.addEventListener('DOMContentLoaded', function() {
       titleStatus = '<span class="status-good">✅ Good</span>';
     }
     titleInfo.innerHTML = `
-      <strong>Title:</strong> ${data.title || '<em>Not found</em>'}<br>
+      <strong>Title:</strong> ${title || '<em>Not found</em>'}<br>
       <strong>Length:</strong> ${titleLength} characters ${titleStatus}<br>
       <small>Recommended: 30-60 characters</small>
     `;
 
     // Meta Description Analysis
     const metaDescInfo = document.getElementById('meta-description-info');
-    const descLength = data.metaDescription.length;
+    const descLength = metaDescription.length;
     let descStatus = '';
     if (descLength === 0) {
       descStatus = '<span class="status-error">❌ Missing</span>';
@@ -70,7 +74,7 @@ document.addEventListener('DOMContentLoaded', function() {
       descStatus = '<span class="status-good">✅ Good</span>';
     }
     metaDescInfo.innerHTML = `
-      <strong>Description:</strong> ${data.metaDescription || '<em>Not found</em>'}<br>
+      <strong>Description:</strong> ${metaDescription || '<em>Not found</em>'}<br>
       <strong>Length:</strong> ${descLength} characters ${descStatus}<br>
       <small>Recommended: 120-160 characters</small>
     `;
@@ -136,18 +140,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function calculateSEOScore(data) {
     let score = 0;
+    
+    // Safely access properties with defaults
+    const title = data.title || '';
+    const metaDescription = data.metaDescription || '';
 
     // Title (20 points)
-    if (data.title.length >= 30 && data.title.length <= 60) {
+    if (title.length >= 30 && title.length <= 60) {
       score += 20;
-    } else if (data.title.length > 0) {
+    } else if (title.length > 0) {
       score += 10;
     }
 
     // Meta Description (20 points)
-    if (data.metaDescription.length >= 120 && data.metaDescription.length <= 160) {
+    if (metaDescription.length >= 120 && metaDescription.length <= 160) {
       score += 20;
-    } else if (data.metaDescription.length > 0) {
+    } else if (metaDescription.length > 0) {
       score += 10;
     }
 

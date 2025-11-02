@@ -3,8 +3,42 @@ document.addEventListener('DOMContentLoaded', function() {
   const analyzeBtn = document.getElementById('analyze-btn');
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
-
+  const themeToggle = document.getElementById('theme-toggle');
+  const body = document.body;
+  
+  // Initialize theme
+  initTheme();
+  
+  // Theme toggle event listener
+  themeToggle.addEventListener('click', toggleTheme);
   analyzeBtn.addEventListener('click', analyzePage);
+
+  function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    body.className = savedTheme;
+    updateThemeIcon(savedTheme);
+  }
+
+  function toggleTheme() {
+    const currentTheme = body.className;
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    body.className = newTheme;
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+  }
+
+  function updateThemeIcon(theme) {
+    const sunIcon = themeToggle.querySelector('.sun-icon');
+    const moonIcon = themeToggle.querySelector('.moon-icon');
+    
+    if (theme === 'dark') {
+      sunIcon.classList.add('hidden');
+      moonIcon.classList.remove('hidden');
+    } else {
+      sunIcon.classList.remove('hidden');
+      moonIcon.classList.add('hidden');
+    }
+  }
 
   async function analyzePage() {
     // Show loading state
@@ -15,16 +49,23 @@ document.addEventListener('DOMContentLoaded', function() {
       // Get the active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+      // Check if it's a Google search page
+      const isGoogleSearch = tab.url && tab.url.includes('google.com/search');
+
       // Execute the content script to get SEO data
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: extractSEOData
+        function: isGoogleSearch ? extractGoogleSERPData : extractSEOData
       });
 
       const seoData = result.result;
 
       // Display the results
-      displayResults(seoData);
+      if (isGoogleSearch) {
+        displaySERPResults(seoData);
+      } else {
+        displayResults(seoData);
+      }
 
       // Hide loading and show results
       loading.classList.add('hidden');
@@ -36,7 +77,63 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  function displaySERPResults(data) {
+    const serpSection = document.getElementById('serp-section');
+    const serpInfo = document.getElementById('serp-info');
+    
+    serpSection.classList.remove('hidden');
+    
+    if (data.results && data.results.length > 0) {
+      let html = `<div class="metric-row">
+        <span class="metric-label">Total Results Found:</span>
+        <span class="metric-value">${data.totalResults || data.results.length}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Search Query:</span>
+        <span class="metric-value">${data.query || 'N/A'}</span>
+      </div>
+      <div style="margin-top: 16px;">
+        <strong style="display: block; margin-bottom: 12px;">Top ${Math.min(data.results.length, 10)} Results:</strong>`;
+      
+      data.results.slice(0, 10).forEach((result, index) => {
+        html += `
+          <div class="serp-result">
+            <div class="serp-position">Position #${index + 1}</div>
+            ${result.url ? `<div class="serp-url">${result.url}</div>` : ''}
+            ${result.title ? `<div class="serp-title">${result.title}</div>` : ''}
+            ${result.snippet ? `<div class="serp-snippet">${result.snippet}</div>` : ''}
+          </div>
+        `;
+      });
+      
+      html += `</div>`;
+      serpInfo.innerHTML = html;
+    } else {
+      serpInfo.innerHTML = '<p class="status-warning">⚠️ No search results found on this page.</p>';
+    }
+    
+    // Hide other sections for SERP pages
+    const scoreInfo = document.getElementById('score-info');
+    scoreInfo.innerHTML = '<p style="text-align: center; color: hsl(var(--muted-foreground));">SERP analysis mode - SEO score not applicable</p>';
+    
+    // Hide other cards
+    document.querySelectorAll('.card').forEach((card, index) => {
+      if (index > 1) { // Keep score and SERP cards
+        card.style.display = 'none';
+      }
+    });
+  }
+
   function displayResults(data) {
+    // Show all cards
+    document.querySelectorAll('.card').forEach(card => {
+      card.style.display = 'block';
+    });
+    
+    // Hide SERP section
+    const serpSection = document.getElementById('serp-section');
+    serpSection.classList.add('hidden');
+    
     // Ensure data properties exist with defaults
     const title = data.title || '';
     const metaDescription = data.metaDescription || '';
@@ -44,6 +141,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const images = data.images || { total: 0, missingAlt: 0 };
     const links = data.links || { total: 0, internal: 0, external: 0, nofollow: 0 };
     const openGraph = data.openGraph || { title: '', description: '', image: '', url: '' };
+    
+    // Calculate and display SEO Score first
+    const scoreInfo = document.getElementById('score-info');
+    const score = calculateSEOScore(data);
+    scoreInfo.innerHTML = `
+      <div class="score-value">${score}/100</div>
+      <div class="score-label">${getScoreLabel(score)}</div>
+    `;
     
     // Title Tag Analysis
     const titleInfo = document.getElementById('title-info');
@@ -59,9 +164,15 @@ document.addEventListener('DOMContentLoaded', function() {
       titleStatus = '<span class="status-good">✅ Good</span>';
     }
     titleInfo.innerHTML = `
-      <strong>Title:</strong> ${title || '<em>Not found</em>'}<br>
-      <strong>Length:</strong> ${titleLength} characters ${titleStatus}<br>
-      <small>Recommended: 30-60 characters</small>
+      <div class="metric-row">
+        <span class="metric-label">Title:</span>
+        <span class="metric-value">${title || '<em>Not found</em>'}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Length:</span>
+        <span class="metric-value">${titleLength} characters ${titleStatus}</span>
+      </div>
+      <small style="color: hsl(var(--muted-foreground));">Recommended: 30-60 characters</small>
     `;
 
     // Meta Description Analysis
@@ -78,9 +189,15 @@ document.addEventListener('DOMContentLoaded', function() {
       descStatus = '<span class="status-good">✅ Good</span>';
     }
     metaDescInfo.innerHTML = `
-      <strong>Description:</strong> ${metaDescription || '<em>Not found</em>'}<br>
-      <strong>Length:</strong> ${descLength} characters ${descStatus}<br>
-      <small>Recommended: 120-160 characters</small>
+      <div class="metric-row">
+        <span class="metric-label">Description:</span>
+        <span class="metric-value">${metaDescription || '<em>Not found</em>'}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Length:</span>
+        <span class="metric-value">${descLength} characters ${descStatus}</span>
+      </div>
+      <small style="color: hsl(var(--muted-foreground));">Recommended: 120-160 characters</small>
     `;
 
     // Headings Analysis
@@ -89,11 +206,23 @@ document.addEventListener('DOMContentLoaded', function() {
                      headings.h1 === 0 ? '<span class="status-error">❌ Missing</span>' :
                      '<span class="status-warning">⚠️ Multiple H1 tags</span>';
     headingsInfo.innerHTML = `
-      <strong>H1:</strong> ${headings.h1} ${h1Status}<br>
-      <strong>H2:</strong> ${headings.h2}<br>
-      <strong>H3:</strong> ${headings.h3}<br>
-      <strong>H4:</strong> ${headings.h4}<br>
-      <small>Best practice: Use exactly one H1 tag per page</small>
+      <div class="metric-row">
+        <span class="metric-label">H1:</span>
+        <span class="metric-value">${headings.h1} ${h1Status}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">H2:</span>
+        <span class="metric-value">${headings.h2}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">H3:</span>
+        <span class="metric-value">${headings.h3}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">H4:</span>
+        <span class="metric-value">${headings.h4}</span>
+      </div>
+      <small style="color: hsl(var(--muted-foreground));">Best practice: Use exactly one H1 tag per page</small>
     `;
 
     // Images Analysis
@@ -104,19 +233,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const altStatus = images.missingAlt === 0 ? '<span class="status-good">✅ All images have alt text</span>' :
                       '<span class="status-warning">⚠️ Some images missing alt text</span>';
     imagesInfo.innerHTML = `
-      <strong>Total Images:</strong> ${images.total}<br>
-      <strong>Missing Alt Text:</strong> ${images.missingAlt} (${missingAltPercent}%) ${altStatus}<br>
-      <small>All images should have descriptive alt text for SEO and accessibility</small>
+      <div class="metric-row">
+        <span class="metric-label">Total Images:</span>
+        <span class="metric-value">${images.total}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Missing Alt Text:</span>
+        <span class="metric-value">${images.missingAlt} (${missingAltPercent}%) ${altStatus}</span>
+      </div>
+      <small style="color: hsl(var(--muted-foreground));">All images should have descriptive alt text for SEO and accessibility</small>
     `;
 
     // Links Analysis
     const linksInfo = document.getElementById('links-info');
     linksInfo.innerHTML = `
-      <strong>Total Links:</strong> ${links.total}<br>
-      <strong>Internal Links:</strong> ${links.internal}<br>
-      <strong>External Links:</strong> ${links.external}<br>
-      <strong>Broken Links:</strong> ${links.nofollow} (nofollow)<br>
-      <small>Good internal linking structure helps SEO</small>
+      <div class="metric-row">
+        <span class="metric-label">Total Links:</span>
+        <span class="metric-value">${links.total}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Internal Links:</span>
+        <span class="metric-value">${links.internal}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">External Links:</span>
+        <span class="metric-value">${links.external}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Nofollow Links:</span>
+        <span class="metric-value">${links.nofollow}</span>
+      </div>
+      <small style="color: hsl(var(--muted-foreground));">Good internal linking structure helps SEO</small>
     `;
 
     // Open Graph Tags
@@ -125,19 +272,23 @@ document.addEventListener('DOMContentLoaded', function() {
       ? '<span class="status-good">✅ Essential tags present</span>'
       : '<span class="status-warning">⚠️ Missing some tags</span>';
     ogInfo.innerHTML = `
-      <strong>og:title:</strong> ${openGraph.title || '<em>Not found</em>'}<br>
-      <strong>og:description:</strong> ${openGraph.description || '<em>Not found</em>'}<br>
-      <strong>og:image:</strong> ${openGraph.image ? '✅ Present' : '<em>Not found</em>'}<br>
-      <strong>og:url:</strong> ${openGraph.url || '<em>Not found</em>'}<br>
-      ${ogStatus}
-    `;
-
-    // Calculate and display SEO Score
-    const scoreInfo = document.getElementById('score-info');
-    const score = calculateSEOScore(data);
-    scoreInfo.innerHTML = `
-      <div style="font-size: 48px; margin-bottom: 10px;">${score}/100</div>
-      <div>${getScoreLabel(score)}</div>
+      <div class="metric-row">
+        <span class="metric-label">og:title:</span>
+        <span class="metric-value">${openGraph.title || '<em>Not found</em>'}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">og:description:</span>
+        <span class="metric-value">${openGraph.description || '<em>Not found</em>'}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">og:image:</span>
+        <span class="metric-value">${openGraph.image ? '✅ Present' : '<em>Not found</em>'}</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">og:url:</span>
+        <span class="metric-value">${openGraph.url || '<em>Not found</em>'}</span>
+      </div>
+      <div style="margin-top: 8px;">${ogStatus}</div>
     `;
   }
 
@@ -285,6 +436,51 @@ function extractSEOData() {
 
   const ogUrl = document.querySelector('meta[property="og:url"]');
   if (ogUrl) data.openGraph.url = ogUrl.getAttribute('content') || '';
+
+  return data;
+}
+
+// Function to extract Google SERP data
+function extractGoogleSERPData() {
+  const data = {
+    query: '',
+    totalResults: 0,
+    results: []
+  };
+
+  // Get search query
+  const searchInput = document.querySelector('input[name="q"]');
+  if (searchInput) {
+    data.query = searchInput.value || '';
+  }
+
+  // Get total results count
+  const resultStats = document.getElementById('result-stats');
+  if (resultStats) {
+    const match = resultStats.textContent.match(/[\d,]+/);
+    if (match) {
+      data.totalResults = match[0];
+    }
+  }
+
+  // Extract organic search results
+  const searchResults = document.querySelectorAll('div.g, div[data-sokoban-container]');
+  
+  searchResults.forEach((result, index) => {
+    if (index >= 10) return; // Limit to top 10
+    
+    const titleElement = result.querySelector('h3');
+    const linkElement = result.querySelector('a');
+    const snippetElement = result.querySelector('div[data-sncf], div.VwiC3b, span.aCOpRe');
+    
+    if (titleElement || linkElement) {
+      data.results.push({
+        title: titleElement ? titleElement.textContent : '',
+        url: linkElement ? linkElement.href : '',
+        snippet: snippetElement ? snippetElement.textContent : ''
+      });
+    }
+  });
 
   return data;
 }

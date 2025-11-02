@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ensure data properties exist with defaults
     const title = data.title || '';
     const metaDescription = data.metaDescription || '';
+    const headings = data.headings || { h1: 0, h2: 0, h3: 0, h4: 0 };
+    const images = data.images || { total: 0, missingAlt: 0 };
+    const links = data.links || { total: 0, internal: 0, external: 0, nofollow: 0 };
+    const openGraph = data.openGraph || { title: '', description: '', image: '', url: '' };
     
     // Title Tag Analysis
     const titleInfo = document.getElementById('title-info');
@@ -81,51 +85,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Headings Analysis
     const headingsInfo = document.getElementById('headings-info');
-    const h1Status = data.headings.h1 === 1 ? '<span class="status-good">✅ Good</span>' :
-                     data.headings.h1 === 0 ? '<span class="status-error">❌ Missing</span>' :
+    const h1Status = headings.h1 === 1 ? '<span class="status-good">✅ Good</span>' :
+                     headings.h1 === 0 ? '<span class="status-error">❌ Missing</span>' :
                      '<span class="status-warning">⚠️ Multiple H1 tags</span>';
     headingsInfo.innerHTML = `
-      <strong>H1:</strong> ${data.headings.h1} ${h1Status}<br>
-      <strong>H2:</strong> ${data.headings.h2}<br>
-      <strong>H3:</strong> ${data.headings.h3}<br>
-      <strong>H4:</strong> ${data.headings.h4}<br>
+      <strong>H1:</strong> ${headings.h1} ${h1Status}<br>
+      <strong>H2:</strong> ${headings.h2}<br>
+      <strong>H3:</strong> ${headings.h3}<br>
+      <strong>H4:</strong> ${headings.h4}<br>
       <small>Best practice: Use exactly one H1 tag per page</small>
     `;
 
     // Images Analysis
     const imagesInfo = document.getElementById('images-info');
-    const missingAltPercent = data.images.total > 0 
-      ? Math.round((data.images.missingAlt / data.images.total) * 100)
+    const missingAltPercent = images.total > 0 
+      ? Math.round((images.missingAlt / images.total) * 100)
       : 0;
-    const altStatus = data.images.missingAlt === 0 ? '<span class="status-good">✅ All images have alt text</span>' :
+    const altStatus = images.missingAlt === 0 ? '<span class="status-good">✅ All images have alt text</span>' :
                       '<span class="status-warning">⚠️ Some images missing alt text</span>';
     imagesInfo.innerHTML = `
-      <strong>Total Images:</strong> ${data.images.total}<br>
-      <strong>Missing Alt Text:</strong> ${data.images.missingAlt} (${missingAltPercent}%) ${altStatus}<br>
+      <strong>Total Images:</strong> ${images.total}<br>
+      <strong>Missing Alt Text:</strong> ${images.missingAlt} (${missingAltPercent}%) ${altStatus}<br>
       <small>All images should have descriptive alt text for SEO and accessibility</small>
     `;
 
     // Links Analysis
     const linksInfo = document.getElementById('links-info');
     linksInfo.innerHTML = `
-      <strong>Total Links:</strong> ${data.links.total}<br>
-      <strong>Internal Links:</strong> ${data.links.internal}<br>
-      <strong>External Links:</strong> ${data.links.external}<br>
-      <strong>Broken Links:</strong> ${data.links.nofollow} (nofollow)<br>
+      <strong>Total Links:</strong> ${links.total}<br>
+      <strong>Internal Links:</strong> ${links.internal}<br>
+      <strong>External Links:</strong> ${links.external}<br>
+      <strong>Broken Links:</strong> ${links.nofollow} (nofollow)<br>
       <small>Good internal linking structure helps SEO</small>
     `;
 
     // Open Graph Tags
     const ogInfo = document.getElementById('og-info');
-    const ogTags = data.openGraph;
-    const ogStatus = (ogTags.title && ogTags.description && ogTags.image) 
+    const ogStatus = (openGraph.title && openGraph.description && openGraph.image) 
       ? '<span class="status-good">✅ Essential tags present</span>'
       : '<span class="status-warning">⚠️ Missing some tags</span>';
     ogInfo.innerHTML = `
-      <strong>og:title:</strong> ${ogTags.title || '<em>Not found</em>'}<br>
-      <strong>og:description:</strong> ${ogTags.description || '<em>Not found</em>'}<br>
-      <strong>og:image:</strong> ${ogTags.image ? '✅ Present' : '<em>Not found</em>'}<br>
-      <strong>og:url:</strong> ${ogTags.url || '<em>Not found</em>'}<br>
+      <strong>og:title:</strong> ${openGraph.title || '<em>Not found</em>'}<br>
+      <strong>og:description:</strong> ${openGraph.description || '<em>Not found</em>'}<br>
+      <strong>og:image:</strong> ${openGraph.image ? '✅ Present' : '<em>Not found</em>'}<br>
+      <strong>og:url:</strong> ${openGraph.url || '<em>Not found</em>'}<br>
       ${ogStatus}
     `;
 
@@ -144,6 +147,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Safely access properties with defaults
     const title = data.title || '';
     const metaDescription = data.metaDescription || '';
+    const headings = data.headings || { h1: 0, h2: 0, h3: 0, h4: 0 };
+    const images = data.images || { total: 0, missingAlt: 0 };
+    const openGraph = data.openGraph || { title: '', description: '', image: '', url: '' };
 
     // Title (20 points)
     if (title.length >= 30 && title.length <= 60) {
@@ -160,20 +166,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // H1 Tag (15 points)
-    if (data.headings.h1 === 1) {
+    if (headings.h1 === 1) {
       score += 15;
-    } else if (data.headings.h1 > 0) {
+    } else if (headings.h1 > 0) {
       score += 8;
     }
 
     // Heading Structure (10 points)
-    if (data.headings.h2 > 0) {
+    if (headings.h2 > 0) {
       score += 10;
     }
 
     // Images Alt Text (15 points)
-    if (data.images.total > 0) {
-      const altRatio = (data.images.total - data.images.missingAlt) / data.images.total;
+    if (images.total > 0) {
+      const altRatio = (images.total - images.missingAlt) / images.total;
       score += Math.round(15 * altRatio);
     } else {
       score += 15; // No images is fine
@@ -181,10 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Open Graph Tags (20 points)
     let ogScore = 0;
-    if (data.openGraph.title) ogScore += 5;
-    if (data.openGraph.description) ogScore += 5;
-    if (data.openGraph.image) ogScore += 5;
-    if (data.openGraph.url) ogScore += 5;
+    if (openGraph.title) ogScore += 5;
+    if (openGraph.description) ogScore += 5;
+    if (openGraph.image) ogScore += 5;
+    if (openGraph.url) ogScore += 5;
     score += ogScore;
 
     return score;

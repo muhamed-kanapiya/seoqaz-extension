@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SEOQaz Analyzer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="popup.css">
 </head>
 
@@ -13,25 +14,12 @@
     <header class="header">
       <div class="header-content">
         <div class="header-title">
-          <svg class="logo-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
+          <i class="fas fa-search logo-icon"></i>
           <h1>SEOQaz</h1>
         </div>
         <button id="theme-toggle" class="icon-button" aria-label="Toggle theme">
-          <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path
-              d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41">
-            </path>
-          </svg>
-          <svg class="moon-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
+          <i class="fas fa-sun sun-icon"></i>
+          <i class="fas fa-moon moon-icon hidden"></i>
         </button>
       </div>
     </header>
@@ -149,7 +137,12 @@
       <div id="images-tab" class="tab-content">
         <div class="card">
           <div class="card-header">
-            <h2 class="card-title">Images Analysis</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h2 class="card-title">Images Analysis</h2>
+              <button id="toggle-small-images-btn" class="filter-btn">
+                <i class="fas fa-filter"></i> Hide Small Images
+              </button>
+            </div>
           </div>
           <div class="card-content">
             <div id="images-overview"></div>

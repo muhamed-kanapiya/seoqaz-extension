@@ -13,6 +13,57 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
+// Shared stop words for content analysis
+const STOP_WORDS = new Set([
+  // English stop words
+  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+  'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+  'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
+  'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each',
+  // Russian stop words
+  'это', 'как', 'его', 'она', 'так', 'но', 'или', 'что', 'все', 'были', 'есть',
+  'был', 'для', 'без', 'при', 'про', 'над', 'под', 'том', 'вам', 'вас', 'нас',
+  'них', 'еще', 'уже', 'где', 'там', 'тут', 'чем', 'эти', 'эта', 'этот',
+  // Kazakh stop words
+  'мен', 'сен', 'ол', 'біз', 'сіз', 'олар', 'және', 'осы', 'бұл', 'сол', 'деп', 'еді',
+  'үшін', 'мұнда', 'онда', 'бар', 'жоқ', 'дейін', 'кейін', 'артық', 'кем'
+]);
+
+// Reusable function to attach copy functionality to copy buttons
+function attachCopyHandlers(container) {
+  container.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const text = this.getAttribute('data-text');
+      navigator.clipboard.writeText(text).then(() => {
+        const icon = this.querySelector('i');
+        icon.classList.remove('fa-copy');
+        icon.classList.add('fa-check');
+        this.classList.add('copied');
+        
+        setTimeout(() => {
+          icon.classList.remove('fa-check');
+          icon.classList.add('fa-copy');
+          this.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text:', err);
+        // Show error feedback
+        const icon = this.querySelector('i');
+        icon.classList.remove('fa-copy');
+        icon.classList.add('fa-times');
+        this.style.background = 'var(--destructive)';
+        
+        setTimeout(() => {
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-copy');
+          this.style.background = '';
+        }, 2000);
+      });
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
@@ -740,10 +791,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     headingsStructure.innerHTML = mockHeadings.map(heading => `
       <div class="heading-item heading-${heading.level}">
-        <span class="heading-level">${heading.level.toUpperCase()}</span>
-        <span class="heading-text">${heading.text}</span>
+        <div style="display: flex; align-items: center; flex: 1;">
+          <span class="heading-level">${heading.level.toUpperCase()}</span>
+          <span class="heading-text">${heading.text}</span>
+        </div>
+        <button class="copy-btn" data-text="${heading.text}" title="Copy to clipboard">
+          <i class="fas fa-copy"></i>
+        </button>
       </div>
     `).join('');
+
+    // Add copy functionality
+    attachCopyHandlers(headingsStructure);
   }
 
   // Функция для отображения тестовых ссылок
@@ -886,10 +945,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     headingsStructure.innerHTML = data.headingsList.map(heading => `
       <div class="heading-item heading-${escapeHtml(heading.level)}">
-        <span class="heading-level">${escapeHtml(heading.level).toUpperCase()}</span>
-        <span class="heading-text">${escapeHtml(heading.text)}</span>
+        <div style="display: flex; align-items: center; flex: 1;">
+          <span class="heading-level">${escapeHtml(heading.level).toUpperCase()}</span>
+          <span class="heading-text">${escapeHtml(heading.text)}</span>
+        </div>
+        <button class="copy-btn" data-text="${escapeHtml(heading.text)}" title="Copy to clipboard">
+          <i class="fas fa-copy"></i>
+        </button>
       </div>
     `).join('');
+
+    // Add copy functionality
+    attachCopyHandlers(headingsStructure);
   }
 
   function displayLinks(data) {
@@ -1002,8 +1069,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Список изображений (ограничиваем до 20)
     const imagesToShow = data.imagesList.slice(0, 20);
-    const imagesHtml = imagesToShow.map((img, index) => `
-      <div class="image-item">
+    const imagesHtml = imagesToShow.map((img, index) => {
+      const isSmall = (img.width < 100 || img.height < 100);
+      const smallClass = isSmall ? 'small-image show' : '';
+      return `
+      <div class="image-item ${smallClass}" data-width="${img.width}" data-height="${img.height}">
         <div class="image-preview">
           <img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt || 'No alt text')}" loading="lazy" 
                class="preview-img" style="max-width: 60px; max-height: 60px;">
@@ -1013,10 +1083,11 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="image-alt ${img.alt ? 'has-alt' : 'no-alt'}">
             Alt: ${img.alt ? escapeHtml(img.alt) : '<em>Missing</em>'}
           </div>
-          <div class="image-size">${img.width}x${img.height}px</div>
+          <div class="image-size">${img.width}x${img.height}px${isSmall ? ' <i class="fas fa-icons" style="color: var(--muted-foreground);"></i>' : ''}</div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     imagesList.innerHTML = imagesHtml +
       (data.imagesList.length > 20 ? `<p class="show-more">Showing first 20 of ${data.imagesList.length} images</p>` : '');
@@ -1027,6 +1098,25 @@ document.addEventListener('DOMContentLoaded', function () {
         this.style.display = 'none';
       });
     });
+
+    // Add toggle small images functionality
+    const toggleBtn = document.getElementById('toggle-small-images-btn');
+    if (toggleBtn && !toggleBtn.hasAttribute('data-listener-attached')) {
+      toggleBtn.setAttribute('data-listener-attached', 'true');
+      
+      toggleBtn.addEventListener('click', function() {
+        const smallImages = imagesList.querySelectorAll('.small-image');
+        const isActive = this.classList.toggle('active');
+        
+        if (isActive) {
+          smallImages.forEach(img => img.classList.remove('show'));
+          this.innerHTML = '<i class="fas fa-eye"></i> Show Small Images';
+        } else {
+          smallImages.forEach(img => img.classList.add('show'));
+          this.innerHTML = '<i class="fas fa-filter"></i> Hide Small Images';
+        }
+      });
+    }
   }
 
   // Display content analysis
@@ -1246,16 +1336,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Анализ контента
     const words = textContent.toLowerCase()
-      .match(/\b[a-zA-Zа-яё]{3,}\b/g) || [];
+      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
 
-    // Фильтруем стоп-слова
-    const stopWords = new Set([
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
-      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each'
-    ]);
+    // Фильтруем стоп-слова (английские, русские и казахские)
+    const stopWords = STOP_WORDS;
 
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
     console.log('Filtered words count:', filteredWords.length);
@@ -1759,16 +1843,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Анализ контента
     const words = textContent.toLowerCase()
-      .match(/\b[a-zA-Zа-яё]{3,}\b/g) || [];
+      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
 
-    // Фильтруем стоп-слова
-    const stopWords = new Set([
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
-      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each'
-    ]);
+    // Фильтруем стоп-слова (английские, русские и казахские)
+    const stopWords = STOP_WORDS;
 
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
     console.log('Filtered words count:', filteredWords.length);

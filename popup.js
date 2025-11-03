@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Инициализация
   initializeTheme();
   initializeTabs();
+  initializeRobotsAnalyzer();
 
   // Автоматический анализ страницы при загрузке
   setTimeout(() => {
@@ -105,6 +106,92 @@ document.addEventListener('DOMContentLoaded', function () {
       initializeWordTabs();
     }, 500);
   }, 100);
+
+  function initializeRobotsAnalyzer() {
+    const analyzeRobotsBtn = document.getElementById('analyze-robots-btn');
+    if (analyzeRobotsBtn) {
+      analyzeRobotsBtn.addEventListener('click', analyzeRobotsTxt);
+    }
+  }
+
+  async function analyzeRobotsTxt() {
+    const robotsContent = document.getElementById('robots-content');
+    const analyzeBtn = document.getElementById('analyze-robots-btn');
+    
+    if (!robotsContent) return;
+
+    try {
+      if (analyzeBtn) {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = 'Analyzing...';
+      }
+
+      // Get the current tab URL
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const url = new URL(tab.url);
+      const robotsUrl = `${url.origin}/robots.txt`;
+
+      // Fetch robots.txt
+      const response = await fetch(robotsUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const robotsText = await response.text();
+      
+      if (!robotsText || robotsText.trim() === '') {
+        robotsContent.innerHTML = '<div class="robots-error">⚠️ Robots.txt file is empty</div>';
+      } else {
+        // Parse and display robots.txt with basic formatting
+        const formattedText = parseRobotsTxt(robotsText);
+        robotsContent.innerHTML = `
+          <div class="robots-success">✅ Robots.txt found at: ${robotsUrl}</div>
+          <div class="robots-content">${formattedText}</div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error fetching robots.txt:', error);
+      robotsContent.innerHTML = `
+        <div class="robots-error">
+          ❌ Could not fetch robots.txt
+          <div style="margin-top: 8px; font-size: 11px;">${error.message}</div>
+        </div>
+      `;
+    } finally {
+      if (analyzeBtn) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze Robots.txt';
+      }
+    }
+  }
+
+  function parseRobotsTxt(text) {
+    // Basic parsing and formatting of robots.txt
+    const lines = text.split('\n');
+    let formatted = '';
+    
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed === '') {
+        formatted += '\n';
+      } else if (trimmed.startsWith('#')) {
+        formatted += `<span style="color: var(--muted-foreground);">${line}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('user-agent:')) {
+        formatted += `<span style="color: var(--primary); font-weight: 600;">${line}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('disallow:')) {
+        formatted += `<span style="color: var(--destructive);">${line}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('allow:')) {
+        formatted += `<span style="color: var(--success);">${line}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('sitemap:')) {
+        formatted += `<span style="color: var(--primary);">${line}</span>\n`;
+      } else {
+        formatted += `${line}\n`;
+      }
+    });
+    
+    return formatted;
+  }
 
   function initializeTheme() {
     if (!themeToggle) return;
@@ -535,6 +622,7 @@ document.addEventListener('DOMContentLoaded', function () {
         displayResults(seoData);
         displayHeadings(seoData);
         displayLinks(seoData);
+        displayImages(seoData);
         displayContent(seoData);
       }
 
@@ -582,12 +670,20 @@ document.addEventListener('DOMContentLoaded', function () {
         description: 'Example OG Description',
         image: 'https://example.com/image.jpg',
         url: 'https://example.com'
-      }
+      },
+      imagesList: [
+        { src: 'https://example.com/image1.jpg', alt: 'Example image 1', hasAlt: true, width: 800, height: 600 },
+        { src: 'https://example.com/image2.jpg', alt: 'Example image 2', hasAlt: true, width: 1200, height: 800 },
+        { src: 'https://example.com/image3.jpg', alt: '', hasAlt: false, width: 400, height: 300 },
+        { src: 'https://example.com/logo.png', alt: 'Company Logo', hasAlt: true, width: 200, height: 100 },
+        { src: 'https://example.com/banner.jpg', alt: '', hasAlt: false, width: 1920, height: 400 }
+      ]
     };
 
     displayResults(mockData);
     displayMockHeadings();
     displayMockLinks();
+    displayImages(mockData);
     displayMockContent();
   }
 
@@ -822,6 +918,66 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  function displayImages(data) {
+    const imagesOverview = document.getElementById('images-overview');
+    const imagesList = document.getElementById('images-list');
+
+    if (!imagesOverview || !imagesList) {
+      console.warn('Images elements not found');
+      return;
+    }
+
+    if (!data || !data.imagesList) {
+      console.warn('No images data available');
+      imagesOverview.innerHTML = '<p class="no-results">No images data available</p>';
+      return;
+    }
+
+    const images = data.imagesList;
+    const totalImages = images.length;
+    const imagesWithAlt = images.filter(img => img.hasAlt).length;
+    const imagesWithoutAlt = totalImages - imagesWithAlt;
+
+    // Display overview statistics
+    imagesOverview.innerHTML = `
+      <div class="links-summary">
+        <div class="link-stat">
+          <span class="link-stat-value">${totalImages}</span>
+          <span class="link-stat-label">Total</span>
+        </div>
+        <div class="link-stat">
+          <span class="link-stat-value">${imagesWithAlt}</span>
+          <span class="link-stat-label">With Alt</span>
+        </div>
+        <div class="link-stat">
+          <span class="link-stat-value">${imagesWithoutAlt}</span>
+          <span class="link-stat-label">Missing Alt</span>
+        </div>
+      </div>
+    `;
+
+    // Display images list (limit to 50 for performance)
+    if (totalImages === 0) {
+      imagesList.innerHTML = '<p class="no-results">No images found on this page</p>';
+      return;
+    }
+
+    const imagesToShow = images.slice(0, 50);
+    const imagesHtml = imagesToShow.map((img, index) => `
+      <div class="image-item ${img.hasAlt ? 'has-alt' : 'no-alt'}">
+        <div class="image-url">Image #${index + 1}: ${img.src.substring(0, 60)}${img.src.length > 60 ? '...' : ''}</div>
+        ${img.hasAlt 
+          ? `<div class="image-alt">Alt: "${img.alt}"</div>` 
+          : `<div class="image-alt image-alt-missing">⚠️ Missing alt text</div>`
+        }
+        ${img.width && img.height ? `<div class="image-url">Size: ${img.width}x${img.height}px</div>` : ''}
+      </div>
+    `).join('');
+
+    imagesList.innerHTML = imagesHtml + 
+      (totalImages > 50 ? `<p class="text-center" style="margin-top: 12px; color: var(--muted-foreground);">Showing first 50 of ${totalImages} images</p>` : '');
+  }
+
   function displayContent(data) {
     const contentOverview = document.getElementById('content-overview');
 
@@ -932,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Добавляем детальные данные для новых табов
       headingsList: [],
       linksList: [],
+      imagesList: [],
       contentData: {
         wordCount: 0,
         charCount: 0,
@@ -949,13 +1106,24 @@ document.addEventListener('DOMContentLoaded', function () {
       data.metaDescription = metaDesc.getAttribute('content') || '';
     }
 
-    // Analyze images
+    // Analyze images with detailed information
     const images = document.querySelectorAll('img');
     data.images.total = images.length;
     images.forEach(img => {
-      if (!img.hasAttribute('alt') || img.getAttribute('alt').trim() === '') {
+      const alt = img.getAttribute('alt') || '';
+      const hasAlt = alt.trim() !== '';
+      
+      if (!hasAlt) {
         data.images.missingAlt++;
       }
+      
+      data.imagesList.push({
+        src: img.src || img.getAttribute('src') || '',
+        alt: alt,
+        hasAlt: hasAlt,
+        width: img.width || 0,
+        height: img.height || 0
+      });
     });
 
     // Extract detailed headings

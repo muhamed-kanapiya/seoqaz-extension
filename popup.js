@@ -168,14 +168,26 @@ document.addEventListener('DOMContentLoaded', function () {
   initializeTheme();
   initializeTabs();
 
-  // Автоматический анализ страницы при загрузке
-  setTimeout(() => {
-    analyzePage();
-    // Инициализируем word tabs после загрузки данных
-    setTimeout(() => {
-      initializeWordTabs();
-    }, 500);
-  }, 100);
+  // Add analyze button listener
+  const analyzeBtn = document.getElementById('analyze-page-btn');
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', async function() {
+      this.disabled = true;
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+      
+      try {
+        await analyzePage();
+        // Hide analyze section and show results
+        const analyzeSection = document.getElementById('analyze-section');
+        if (analyzeSection) analyzeSection.classList.add('hidden');
+      } catch (error) {
+        console.error('Analysis failed:', error);
+      } finally {
+        this.disabled = false;
+        this.innerHTML = '<i class="fas fa-search"></i> Analyze Page';
+      }
+    });
+  }
 
   function initializeTheme() {
     if (!themeToggle) return;
@@ -830,15 +842,31 @@ document.addEventListener('DOMContentLoaded', function () {
       } else {
         console.log('[SEOQaz Debug] Displaying SEO results...');
         // Проверяем, что данные не пустые
-        if (seoData && seoData.title) {
+        if (seoData && (seoData.title || seoData.headings || seoData.images)) {
           displayResults(seoData);
           displayHeadings(seoData);
           displayLinks(seoData);
           displayContent(seoData);
           displayImages(seoData);
         } else {
-          console.warn('[SEOQaz Debug] No valid SEO data received, using mock data');
-          displayMockData();
+          console.warn('[SEOQaz Debug] No valid SEO data received');
+          // Show message instead of mock data
+          if (results) {
+            results.innerHTML = `
+              <div class="card">
+                <div class="card-header">
+                  <h2 class="card-title">No Data Available</h2>
+                </div>
+                <div class="card-content">
+                  <p class="status-warning">⚠️ Unable to extract SEO data from this page.</p>
+                  <p style="margin-top: 12px; color: hsl(var(--muted-foreground));">
+                    This page may not have standard SEO elements, or the page content may not be fully loaded.
+                    Try refreshing the page and analyzing again.
+                  </p>
+                </div>
+              </div>
+            `;
+          }
         }
       }
 
@@ -883,11 +911,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const tabNavigation = document.getElementById('tab-navigation');
       if (tabNavigation) tabNavigation.classList.remove('hidden');
-
-      // Инициализируем word tabs для mock данных
-      setTimeout(() => {
-        initializeWordTabs();
-      }, 200);
     }
   }
 
@@ -1082,12 +1105,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function displayHeadings(data) {
     const headingsStructure = document.getElementById('headings-structure');
-    if (!headingsStructure || !data.headingsList) {
-      displayMockHeadings();
-      return;
-    }
+    if (!headingsStructure) return;
 
-    if (data.headingsList.length === 0) {
+    if (!data || !data.headingsList || data.headingsList.length === 0) {
       headingsStructure.innerHTML = '<p class="no-results">No headings found on this page.</p>';
       return;
     }
@@ -1112,8 +1132,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const linksAnalysis = document.getElementById('links-analysis');
     const tagsCloud = document.getElementById('tags-cloud');
 
-    if (!linksAnalysis || !data.linksList) {
-      displayMockLinks();
+    if (!linksAnalysis) return;
+
+    if (!data || !data.linksList || data.linksList.length === 0) {
+      linksAnalysis.innerHTML = '<p class="no-results">No links found on this page.</p>';
+      if (tagsCloud) tagsCloud.innerHTML = '';
       return;
     }
 
@@ -1154,9 +1177,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Облако тегов из текста ссылок
     if (tagsCloud) {
       const linkTexts = data.linksList.map(link => link.text.toLowerCase()).join(' ');
-      // Поддержка английского, русского и казахского языков
-      // Note: \b word boundaries don't work with Cyrillic/Kazakh characters in JavaScript
-      const words = linkTexts.match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
+      // Улучшенная поддержка русского и казахского языков
+      // Используем Unicode диапазоны для кириллицы и казахских символов
+      const words = linkTexts.match(/[\p{L}\p{N}]{3,}/gu) || [];
       const wordCount = {};
 
       words.forEach(word => {
@@ -1486,8 +1509,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const textContent = extractTextContent();
 
     // Анализ контента
+    // Улучшенная поддержка русского и казахского языков
+    // Используем Unicode диапазоны для всех букв и цифр
     const words = textContent.toLowerCase()
-      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
+      .match(/[\p{L}\p{N}]{3,}/gu) || [];
 
     // Фильтруем стоп-слова (английские, русские и казахские)
     const stopWords = STOP_WORDS;
@@ -1845,243 +1870,5 @@ document.addEventListener('DOMContentLoaded', function () {
         featuresPanel.style.display = featuresPanel.style.display === 'none' ? 'block' : 'none';
       }
     });
-  }
-
-  // Обновляем функцию извлечения данных
-  function extractSEOData() {
-    console.log('[SEOQaz Debug] Extracting SEO data from page...');
-    
-    const data = {
-      title: document.title || '',
-      metaDescription: '',
-      headings: {
-        h1: document.querySelectorAll('h1').length,
-        h2: document.querySelectorAll('h2').length,
-        h3: document.querySelectorAll('h3').length,
-        h4: document.querySelectorAll('h4').length
-      },
-      images: {
-        total: 0,
-        missingAlt: 0
-      },
-      links: {
-        total: 0,
-        internal: 0,
-        external: 0,
-        nofollow: 0
-      },
-      openGraph: {
-        title: '',
-        description: '',
-        image: '',
-        url: ''
-      },
-      // Добавляем детальные данные для новых табов
-      headingsList: [],
-      linksList: [],
-      imagesList: [],
-      contentData: {
-        wordCount: 0,
-        charCount: 0,
-        paragraphCount: 0,
-        sentenceCount: 0,
-        singleWords: {},
-        doubleWords: {},
-        tripleWords: {}
-      }
-    };
-
-    console.log('[SEOQaz Debug] Initial data object created');
-
-    // Get meta description
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      data.metaDescription = metaDesc.getAttribute('content') || '';
-    }
-
-    // Analyze images
-    const images = document.querySelectorAll('img');
-    data.images.total = images.length;
-    console.log('[SEOQaz Debug] Found', images.length, 'images');
-
-    images.forEach(img => {
-      const alt = img.getAttribute('alt');
-      if (!alt || alt.trim() === '') {
-        data.images.missingAlt++;
-      }
-      
-      // Добавляем в детальный список
-      data.imagesList.push({
-        src: img.src || img.getAttribute('data-src') || '',
-        alt: alt || '',
-        width: img.naturalWidth || img.width || 0,
-        height: img.naturalHeight || img.height || 0,
-        loading: img.getAttribute('loading') || ''
-      });
-    });
-
-    // Extract detailed headings
-    const headingElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    console.log('[SEOQaz Debug] Found', headingElements.length, 'headings');
-    
-    headingElements.forEach(heading => {
-      data.headingsList.push({
-        level: heading.tagName.toLowerCase(),
-        text: heading.textContent.trim()
-      });
-    });
-
-    // Analyze links
-    const links = document.querySelectorAll('a[href]');
-    data.links.total = links.length;
-    const currentDomain = window.location.hostname;
-    console.log('[SEOQaz Debug] Found', links.length, 'links');
-
-    links.forEach(link => {
-      const href = link.getAttribute('href');
-      if (!href) return;
-
-      let linkType = 'internal';
-      try {
-        const url = new URL(href, window.location.href);
-        if (url.hostname === currentDomain) {
-          data.links.internal++;
-          linkType = 'internal';
-        } else {
-          data.links.external++;
-          linkType = 'external';
-        }
-      } catch (e) {
-        // Invalid URL, treat as internal
-        data.links.internal++;
-      }
-
-      if (link.getAttribute('rel') === 'nofollow') {
-        data.links.nofollow++;
-      }
-
-      // Add to detailed links list
-      data.linksList.push({
-        url: href,
-        text: link.textContent.trim(),
-        type: linkType
-      });
-    });
-
-    // Extract and analyze page content
-    function extractTextContent() {
-      console.log('[SEOQaz Debug] Extracting text content...');
-      
-      // Создаем копию body для безопасной работы
-      const bodyClone = document.body.cloneNode(true);
-      
-      // Удаляем элементы, которые не содержат основной контент
-      const elementsToRemove = bodyClone.querySelectorAll(
-        'script, style, noscript, iframe, object, embed, nav, header, footer, aside, menu'
-      );
-      elementsToRemove.forEach(el => el.remove());
-
-      // Получаем весь текст
-      let fullText = bodyClone.textContent || bodyClone.innerText || '';
-      
-      // Очищаем текст
-      fullText = fullText
-        .replace(/\s+/g, ' ')  // Заменяем множественные пробелы на одиночные
-        .replace(/\n+/g, ' ')  // Заменяем переносы строк на пробелы
-        .replace(/\t+/g, ' ')  // Заменяем табы на пробелы
-        .trim();
-
-      console.log('[SEOQaz Debug] Extracted text length:', fullText.length);
-      return fullText;
-    }
-
-    const textContent = extractTextContent();
-
-    // Анализ контента
-    const words = textContent.toLowerCase()
-      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
-
-    // Фильтруем стоп-слова (английские, русские и казахские)
-    const stopWords = STOP_WORDS;
-
-    const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
-    console.log('[SEOQaz Debug] Filtered words count:', filteredWords.length);
-
-    data.contentData.wordCount = filteredWords.length;
-    data.contentData.charCount = textContent.length;
-    data.contentData.paragraphCount = document.querySelectorAll('p').length;
-    data.contentData.sentenceCount = (textContent.match(/[.!?]+/g) || []).length;
-
-    // Count word frequencies
-    const wordFreq = {};
-    filteredWords.forEach(word => {
-      wordFreq[word] = (wordFreq[word] || 0) + 1;
-    });
-
-    // Get top single words
-    const sortedWords = Object.entries(wordFreq)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 20);
-
-    sortedWords.forEach(([word, count]) => {
-      data.contentData.singleWords[word] = {
-        count: count,
-        percentage: ((count / filteredWords.length) * 100).toFixed(2)
-      };
-    });
-
-    // Count 2-word phrases
-    const doubleWordFreq = {};
-    for (let i = 0; i < filteredWords.length - 1; i++) {
-      const phrase = `${filteredWords[i]} ${filteredWords[i + 1]}`;
-      doubleWordFreq[phrase] = (doubleWordFreq[phrase] || 0) + 1;
-    }
-
-    const sortedDoubleWords = Object.entries(doubleWordFreq)
-      .filter(([,count]) => count > 1)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 15);
-
-    sortedDoubleWords.forEach(([phrase, count]) => {
-      data.contentData.doubleWords[phrase] = {
-        count: count,
-        percentage: ((count / (filteredWords.length - 1)) * 100).toFixed(2)
-      };
-    });
-
-    // Count 3-word phrases
-    const tripleWordFreq = {};
-    for (let i = 0; i < filteredWords.length - 2; i++) {
-      const phrase = `${filteredWords[i]} ${filteredWords[i + 1]} ${filteredWords[i + 2]}`;
-      tripleWordFreq[phrase] = (tripleWordFreq[phrase] || 0) + 1;
-    }
-
-    const sortedTripleWords = Object.entries(tripleWordFreq)
-      .filter(([,count]) => count > 1)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10);
-
-    sortedTripleWords.forEach(([phrase, count]) => {
-      data.contentData.tripleWords[phrase] = {
-        count: count,
-        percentage: ((count / (filteredWords.length - 2)) * 100).toFixed(2)
-      };
-    });
-
-    // Get Open Graph tags
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) data.openGraph.title = ogTitle.getAttribute('content') || '';
-
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) data.openGraph.description = ogDesc.getAttribute('content') || '';
-
-    const ogImage = document.querySelector('meta[property="og:image"]');
-    if (ogImage) data.openGraph.image = ogImage.getAttribute('content') || '';
-
-    const ogUrl = document.querySelector('meta[property="og:url"]');
-    if (ogUrl) data.openGraph.url = ogUrl.getAttribute('content') || '';
-
-    console.log('[SEOQaz Debug] SEO data extraction completed:', data);
-    return data;
   }
 });

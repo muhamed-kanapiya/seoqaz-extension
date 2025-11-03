@@ -1167,6 +1167,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  // Utility function for displaying word lists
+  function displayWordList(containerId, words) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = words.map(item => `
+      <div class="word-item">
+        <span class="word-text">${escapeHtml(item.word || item.phrase)}</span>
+        <div>
+          <span class="word-count">${item.count}</span>
+          <span class="word-percentage">${item.percentage}%</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
   // This function runs in the context of the web page
   function extractSEOData() {
     console.log('[SEOQaz Debug] Extracting SEO data from page...');

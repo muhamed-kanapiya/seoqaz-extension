@@ -1016,7 +1016,7 @@ document.addEventListener('DOMContentLoaded', function () {
           ? `<div class="image-alt">Alt: "${img.alt}"</div>` 
           : `<div class="image-alt image-alt-missing">⚠️ Missing alt text</div>`
         }
-        ${img.width && img.height ? `<div class="image-url">Size: ${img.width}x${img.height}px</div>` : ''}
+        ${img.width && img.height ? `<div class="image-size">Size: ${img.width}x${img.height}px</div>` : ''}
       </div>
     `).join('');
 

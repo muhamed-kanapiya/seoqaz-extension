@@ -13,6 +13,23 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
+// Shared stop words for content analysis
+const STOP_WORDS = new Set([
+  // English stop words
+  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+  'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+  'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
+  'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each',
+  // Russian stop words
+  'это', 'как', 'его', 'она', 'так', 'но', 'или', 'что', 'все', 'были', 'есть',
+  'был', 'для', 'без', 'при', 'про', 'над', 'под', 'том', 'вам', 'вас', 'нас',
+  'них', 'еще', 'уже', 'где', 'там', 'тут', 'чем', 'эти', 'эта', 'этот',
+  // Kazakh stop words
+  'мен', 'сен', 'ол', 'біз', 'сіз', 'олар', 'және', 'осы', 'бұл', 'сол', 'деп', 'еді',
+  'үшін', 'мұнда', 'онда', 'бар', 'жоқ', 'дейін', 'кейін', 'артық', 'кем'
+]);
+
 document.addEventListener('DOMContentLoaded', function () {
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
@@ -765,6 +782,19 @@ document.addEventListener('DOMContentLoaded', function () {
             icon.classList.add('fa-copy');
             this.classList.remove('copied');
           }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy text:', err);
+          // Show error feedback
+          const icon = this.querySelector('i');
+          icon.classList.remove('fa-copy');
+          icon.classList.add('fa-times');
+          this.style.background = 'var(--destructive)';
+          
+          setTimeout(() => {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-copy');
+            this.style.background = '';
+          }, 2000);
         });
       });
     });
@@ -937,6 +967,17 @@ document.addEventListener('DOMContentLoaded', function () {
           }, 2000);
         }).catch(err => {
           console.error('Failed to copy text:', err);
+          // Show error feedback
+          const icon = this.querySelector('i');
+          icon.classList.remove('fa-copy');
+          icon.classList.add('fa-times');
+          this.style.background = 'var(--destructive)';
+          
+          setTimeout(() => {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-copy');
+            this.style.background = '';
+          }, 2000);
         });
       });
     });
@@ -1084,12 +1125,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Add toggle small images functionality
     const toggleBtn = document.getElementById('toggle-small-images-btn');
-    if (toggleBtn) {
-      // Remove previous event listener
-      const newToggleBtn = toggleBtn.cloneNode(true);
-      toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+    if (toggleBtn && !toggleBtn.hasAttribute('data-listener-attached')) {
+      toggleBtn.setAttribute('data-listener-attached', 'true');
       
-      newToggleBtn.addEventListener('click', function() {
+      toggleBtn.addEventListener('click', function() {
         const smallImages = imagesList.querySelectorAll('.small-image');
         const isActive = this.classList.toggle('active');
         
@@ -1324,21 +1363,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
 
     // Фильтруем стоп-слова (английские, русские и казахские)
-    const stopWords = new Set([
-      // English stop words
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
-      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each',
-      // Russian stop words
-      'это', 'как', 'его', 'она', 'так', 'его', 'но', 'или', 'что', 'все', 'были', 'есть',
-      'был', 'как', 'для', 'без', 'при', 'про', 'над', 'под', 'том', 'вам', 'вас', 'нас',
-      'них', 'или', 'еще', 'уже', 'где', 'там', 'тут', 'чем', 'эти', 'эта', 'этот',
-      // Kazakh stop words
-      'мен', 'сен', 'ол', 'біз', 'сіз', 'олар', 'және', 'осы', 'бұл', 'сол', 'деп', 'еді',
-      'үшін', 'мұнда', 'онда', 'бар', 'жоқ', 'дейін', 'кейін', 'артық', 'кем'
-    ]);
+    const stopWords = STOP_WORDS;
 
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
     console.log('Filtered words count:', filteredWords.length);
@@ -1845,21 +1870,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
 
     // Фильтруем стоп-слова (английские, русские и казахские)
-    const stopWords = new Set([
-      // English stop words
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
-      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
-      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
-      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each',
-      // Russian stop words
-      'это', 'как', 'его', 'она', 'так', 'его', 'но', 'или', 'что', 'все', 'были', 'есть',
-      'был', 'как', 'для', 'без', 'при', 'про', 'над', 'под', 'том', 'вам', 'вас', 'нас',
-      'них', 'или', 'еще', 'уже', 'где', 'там', 'тут', 'чем', 'эти', 'эта', 'этот',
-      // Kazakh stop words
-      'мен', 'сен', 'ол', 'біз', 'сіз', 'олар', 'және', 'осы', 'бұл', 'сол', 'деп', 'еді',
-      'үшін', 'мұнда', 'онда', 'бар', 'жоқ', 'дейін', 'кейін', 'артық', 'кем'
-    ]);
+    const stopWords = STOP_WORDS;
 
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
     console.log('Filtered words count:', filteredWords.length);

@@ -30,6 +30,10 @@ const STOP_WORDS = new Set([
   'үшін', 'мұнда', 'онда', 'бар', 'жоқ', 'дейін', 'кейін', 'артық', 'кем'
 ]);
 
+// Shared regex pattern for word extraction supporting all languages
+// Uses Unicode property escapes for letters and numbers
+const WORD_EXTRACTION_REGEX = /[\p{L}\p{N}]{3,}/gu;
+
 // Reusable function to attach copy functionality to copy buttons
 function attachCopyHandlers(container) {
   container.querySelectorAll('.copy-btn').forEach(btn => {
@@ -990,7 +994,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const linkTexts = data.linksList.map(link => link.text.toLowerCase()).join(' ');
       // Улучшенная поддержка русского и казахского языков
       // Используем Unicode диапазоны для кириллицы и казахских символов
-      const words = linkTexts.match(/[\p{L}\p{N}]{3,}/gu) || [];
+      const words = linkTexts.match(WORD_EXTRACTION_REGEX) || [];
       const wordCount = {};
 
       words.forEach(word => {
@@ -1339,7 +1343,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Улучшенная поддержка русского и казахского языков
     // Используем Unicode диапазоны для всех букв и цифр
     const words = textContent.toLowerCase()
-      .match(/[\p{L}\p{N}]{3,}/gu) || [];
+      .match(WORD_EXTRACTION_REGEX) || [];
 
     // Фильтруем стоп-слова (английские, русские и казахские)
     const stopWords = STOP_WORDS;

@@ -1,5 +1,8 @@
 // SEO Analysis Script for Popup
 document.addEventListener('DOMContentLoaded', function () {
+  // Constants
+  const AVERAGE_READING_SPEED = 200; // words per minute
+  
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
   const themeToggle = document.getElementById('theme-toggle');
@@ -1044,8 +1047,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const linksCount = data.links ? data.links.total : 0;
     const textToLinkRatio = linksCount > 0 ? Math.round(contentData.wordCount / linksCount) : contentData.wordCount;
     
-    // Calculate reading time (average reading speed: 200 words per minute)
-    const readingTime = Math.ceil(contentData.wordCount / 200);
+    // Calculate reading time
+    const readingTime = Math.ceil(contentData.wordCount / AVERAGE_READING_SPEED);
 
     // Статистика контента с дополнительными метриками
     contentOverview.innerHTML = `

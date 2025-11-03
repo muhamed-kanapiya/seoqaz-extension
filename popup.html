@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEOQaz Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="light">
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <div class="header-title">
+          <svg class="logo-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <h1>SEOQaz</h1>
+        </div>
+        <button id="theme-toggle" class="icon-button" aria-label="Toggle theme">
+          <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+          <svg class="moon-icon hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+      <button id="analyze-btn" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        Analyze Page
+      </button>
+    </header>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p class="loading-text">Analyzing page...</p>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div id="serp-section" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Google SERP Analysis</h2>
+          </div>
+          <div class="card-content">
+            <div id="serp-info"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">SEO Score</h2>
+        </div>
+        <div class="card-content">
+          <div id="score-info" class="score-display"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Title Tag</h2>
+        </div>
+        <div class="card-content">
+          <div id="title-info"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Meta Description</h2>
+        </div>
+        <div class="card-content">
+          <div id="meta-description-info"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Headings</h2>
+        </div>
+        <div class="card-content">
+          <div id="headings-info"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Images</h2>
+        </div>
+        <div class="card-content">
+          <div id="images-info"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Links</h2>
+        </div>
+        <div class="card-content">
+          <div id="links-info"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Open Graph Tags</h2>
+        </div>
+        <div class="card-content">
+          <div id="og-info"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

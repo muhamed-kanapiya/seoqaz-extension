@@ -681,9 +681,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (loading) loading.classList.add('hidden');
       if (results) results.classList.remove('hidden');
 
-      if (loading) loading.classList.add('hidden');
-      if (results) results.classList.remove('hidden');
-
       const tabNavigation = document.getElementById('tab-navigation');
       if (tabNavigation) tabNavigation.classList.remove('hidden');
 
@@ -1568,9 +1565,12 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.appendChild(featuresPanel);
 
     // Обработчики событий
-    document.getElementById('close-serp-panel').addEventListener('click', () => {
-      featuresPanel.remove();
-    });
+    const closeBtn = document.getElementById('close-serp-panel');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        featuresPanel.remove();
+      });
+    }
 
     // Подсветка элементов при наведении
     document.querySelectorAll('.serp-feature-item').forEach(item => {

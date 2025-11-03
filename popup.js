@@ -1,9 +1,20 @@
 // SEO Analysis Script for Popup
 document.addEventListener('DOMContentLoaded', function () {
+  // Constants
+  const AVERAGE_READING_SPEED = 200; // words per minute
+  
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
   const themeToggle = document.getElementById('theme-toggle');
   const body = document.body;
+
+  // Utility function to escape HTML
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
 
   // Функция поиска слов - объявляем в глобальной области видимости
   function performWordSearch() {
@@ -61,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (results.length > 0) {
         searchResultsList.innerHTML = results.slice(0, 10).map(item => `
           <div class="word-item">
-            <span class="word-text">${item.word}</span>
+            <span class="word-text">${escapeHtml(item.word)}</span>
             <div>
               <span class="word-count">${item.count}</span>
               <span class="word-percentage">${item.percentage}%</span>
@@ -74,9 +85,9 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       // Fallback к mock данным
       const mockResults = [
-        { word: searchTerm, count: 5, percentage: 0.4 },
-        { word: searchTerm + ' optimization', count: 3, percentage: 0.24 },
-        { word: 'best ' + searchTerm, count: 2, percentage: 0.16 }
+        { word: escapeHtml(searchTerm), count: 5, percentage: 0.4 },
+        { word: escapeHtml(searchTerm) + ' optimization', count: 3, percentage: 0.24 },
+        { word: 'best ' + escapeHtml(searchTerm), count: 2, percentage: 0.16 }
       ];
 
       searchResultsList.innerHTML = mockResults.map(item => `
@@ -96,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Инициализация
   initializeTheme();
   initializeTabs();
+  initializeRobotsAnalyzer();
 
   // Автоматический анализ страницы при загрузке
   setTimeout(() => {
@@ -105,6 +117,121 @@ document.addEventListener('DOMContentLoaded', function () {
       initializeWordTabs();
     }, 500);
   }, 100);
+
+  function initializeRobotsAnalyzer() {
+    const analyzeRobotsBtn = document.getElementById('analyze-robots-btn');
+    if (analyzeRobotsBtn) {
+      analyzeRobotsBtn.addEventListener('click', analyzeRobotsTxt);
+    }
+  }
+
+  async function analyzeRobotsTxt() {
+    const robotsContent = document.getElementById('robots-content');
+    const analyzeBtn = document.getElementById('analyze-robots-btn');
+    
+    if (!robotsContent) return;
+
+    try {
+      if (analyzeBtn) {
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = 'Analyzing...';
+      }
+
+      // Get the current tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+      // Execute script in the page context to fetch robots.txt
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: async () => {
+          try {
+            const url = new URL(window.location.href);
+            const robotsUrl = `${url.origin}/robots.txt`;
+            const response = await fetch(robotsUrl);
+            
+            if (!response.ok) {
+              return { 
+                success: false, 
+                error: `HTTP ${response.status}: ${response.statusText}`,
+                url: robotsUrl
+              };
+            }
+
+            const text = await response.text();
+            return { success: true, text: text, url: robotsUrl };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        }
+      });
+
+      const data = result.result;
+      
+      if (!data.success) {
+        robotsContent.innerHTML = `
+          <div class="robots-error">
+            ❌ Could not fetch robots.txt
+            <div style="margin-top: 8px; font-size: 11px;">${escapeHtml(data.error)}</div>
+          </div>
+        `;
+      } else if (!data.text || data.text.trim() === '') {
+        robotsContent.innerHTML = '<div class="robots-error">⚠️ Robots.txt file is empty</div>';
+      } else {
+        // Parse and display robots.txt with basic formatting
+        const formattedText = parseRobotsTxt(data.text);
+        robotsContent.innerHTML = `
+          <div class="robots-success">✅ Robots.txt found at: ${escapeHtml(data.url)}</div>
+          <div class="robots-content">${formattedText}</div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error analyzing robots.txt:', error);
+      robotsContent.innerHTML = `
+        <div class="robots-error">
+          ❌ Error: ${escapeHtml(error.message)}
+        </div>
+      `;
+    } finally {
+      if (analyzeBtn) {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze Robots.txt';
+      }
+    }
+  }
+
+  function parseRobotsTxt(text) {
+    // Basic parsing and formatting of robots.txt with HTML escaping
+    const escapeHtml = (str) => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
+    
+    const lines = text.split('\n');
+    let formatted = '';
+    
+    lines.forEach(line => {
+      const escapedLine = escapeHtml(line);
+      const trimmed = line.trim();
+      if (trimmed === '') {
+        formatted += '\n';
+      } else if (trimmed.startsWith('#')) {
+        formatted += `<span style="color: var(--muted-foreground);">${escapedLine}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('user-agent:')) {
+        formatted += `<span style="color: var(--primary); font-weight: 600;">${escapedLine}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('disallow:')) {
+        formatted += `<span style="color: var(--destructive);">${escapedLine}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('allow:')) {
+        formatted += `<span style="color: var(--success);">${escapedLine}</span>\n`;
+      } else if (trimmed.toLowerCase().startsWith('sitemap:')) {
+        formatted += `<span style="color: var(--primary);">${escapedLine}</span>\n`;
+      } else {
+        formatted += `${escapedLine}\n`;
+      }
+    });
+    
+    return formatted;
+  }
 
   function initializeTheme() {
     if (!themeToggle) return;
@@ -535,6 +662,7 @@ document.addEventListener('DOMContentLoaded', function () {
         displayResults(seoData);
         displayHeadings(seoData);
         displayLinks(seoData);
+        displayImages(seoData);
         displayContent(seoData);
       }
 
@@ -582,12 +710,20 @@ document.addEventListener('DOMContentLoaded', function () {
         description: 'Example OG Description',
         image: 'https://example.com/image.jpg',
         url: 'https://example.com'
-      }
+      },
+      imagesList: [
+        { src: 'https://example.com/image1.jpg', alt: 'Example image 1', hasAlt: true, width: 800, height: 600 },
+        { src: 'https://example.com/image2.jpg', alt: 'Example image 2', hasAlt: true, width: 1200, height: 800 },
+        { src: 'https://example.com/image3.jpg', alt: '', hasAlt: false, width: 400, height: 300 },
+        { src: 'https://example.com/logo.png', alt: 'Company Logo', hasAlt: true, width: 200, height: 100 },
+        { src: 'https://example.com/banner.jpg', alt: '', hasAlt: false, width: 1920, height: 400 }
+      ]
     };
 
     displayResults(mockData);
     displayMockHeadings();
     displayMockLinks();
+    displayImages(mockData);
     displayMockContent();
   }
 
@@ -666,7 +802,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return `<span class="tag-item tag-size-${size}">${tag}<span class="tag-count">${count}</span></span>`;
       }).join('');
 
-      tagsCloud.innerHTML = `<div class="tags-cloud">${tagsHtml}</div>`;
+      tagsCloud.innerHTML = `
+        <h3 class="section-title" style="margin-top: 16px;">Link Text Cloud</h3>
+        <div class="tags-cloud">${tagsHtml}</div>
+      `;
     }
   }
 
@@ -690,6 +829,14 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="content-stat">
           <span class="content-stat-value">89</span>
           <span class="content-stat-label">Sentences</span>
+        </div>
+        <div class="content-stat">
+          <span class="content-stat-value">38</span>
+          <span class="content-stat-label">Words/Link</span>
+        </div>
+        <div class="content-stat">
+          <span class="content-stat-value">6</span>
+          <span class="content-stat-label">Min Read</span>
         </div>
       `;
     }
@@ -722,7 +869,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     container.innerHTML = words.map(item => `
       <div class="word-item">
-        <span class="word-text">${item.word || item.phrase}</span>
+        <span class="word-text">${escapeHtml(item.word || item.phrase)}</span>
         <div>
           <span class="word-count">${item.count}</span>
           <span class="word-percentage">${item.percentage}%</span>
@@ -744,9 +891,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     headingsStructure.innerHTML = data.headingsList.map(heading => `
-      <div class="heading-item heading-${heading.level}">
-        <span class="heading-level">${heading.level.toUpperCase()}</span>
-        <span class="heading-text">${heading.text}</span>
+      <div class="heading-item heading-${escapeHtml(heading.level)}">
+        <span class="heading-level">${escapeHtml(heading.level).toUpperCase()}</span>
+        <span class="heading-text">${escapeHtml(heading.text)}</span>
       </div>
     `).join('');
   }
@@ -785,9 +932,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const linksToShow = data.linksList.slice(0, 20);
     const linksHtml = linksToShow.map(link => `
       <div class="link-item">
-        <a href="${link.url}" class="link-url" target="_blank">${link.url}</a>
-        <div class="link-text">${link.text}</div>
-        <span class="link-type link-${link.type}">${link.type}</span>
+        <a href="${escapeHtml(link.url)}" class="link-url" target="_blank">${escapeHtml(link.url)}</a>
+        <div class="link-text">${escapeHtml(link.text)}</div>
+        <span class="link-type link-${escapeHtml(link.type)}">${escapeHtml(link.type)}</span>
       </div>
     `).join('');
 
@@ -812,14 +959,80 @@ document.addEventListener('DOMContentLoaded', function () {
       if (sortedTags.length > 0) {
         const tagsHtml = sortedTags.map(([tag, count]) => {
           const size = Math.min(5, Math.max(1, Math.ceil(count / 2)));
-          return `<span class="tag-item tag-size-${size}">${tag}<span class="tag-count">${count}</span></span>`;
+          return `<span class="tag-item tag-size-${size}">${escapeHtml(tag)}<span class="tag-count">${count}</span></span>`;
         }).join('');
 
-        tagsCloud.innerHTML = `<div class="tags-cloud">${tagsHtml}</div>`;
+        tagsCloud.innerHTML = `
+          <h3 class="section-title" style="margin-top: 16px;">Link Text Cloud</h3>
+          <div class="tags-cloud">${tagsHtml}</div>
+        `;
       } else {
-        tagsCloud.innerHTML = '<div class="tags-cloud-empty">No common tags found in link texts</div>';
+        tagsCloud.innerHTML = `
+          <h3 class="section-title" style="margin-top: 16px;">Link Text Cloud</h3>
+          <div class="tags-cloud-empty">No common tags found in link texts</div>
+        `;
       }
     }
+  }
+
+  function displayImages(data) {
+    const imagesOverview = document.getElementById('images-overview');
+    const imagesList = document.getElementById('images-list');
+
+    if (!imagesOverview || !imagesList) {
+      console.warn('Images elements not found');
+      return;
+    }
+
+    if (!data || !data.imagesList) {
+      console.warn('No images data available');
+      imagesOverview.innerHTML = '<p class="no-results">No images data available</p>';
+      return;
+    }
+
+    const images = data.imagesList;
+    const totalImages = images.length;
+    const imagesWithAlt = images.filter(img => img.hasAlt).length;
+    const imagesWithoutAlt = totalImages - imagesWithAlt;
+
+    // Display overview statistics
+    imagesOverview.innerHTML = `
+      <div class="links-summary">
+        <div class="link-stat">
+          <span class="link-stat-value">${totalImages}</span>
+          <span class="link-stat-label">Total</span>
+        </div>
+        <div class="link-stat">
+          <span class="link-stat-value">${imagesWithAlt}</span>
+          <span class="link-stat-label">With Alt</span>
+        </div>
+        <div class="link-stat">
+          <span class="link-stat-value">${imagesWithoutAlt}</span>
+          <span class="link-stat-label">Missing Alt</span>
+        </div>
+      </div>
+    `;
+
+    // Display images list (limit to 50 for performance)
+    if (totalImages === 0) {
+      imagesList.innerHTML = '<p class="no-results">No images found on this page</p>';
+      return;
+    }
+
+    const imagesToShow = images.slice(0, 50);
+    const imagesHtml = imagesToShow.map((img, index) => `
+      <div class="image-item ${img.hasAlt ? 'has-alt' : 'no-alt'}">
+        <div class="image-url">Image #${index + 1}: ${escapeHtml(img.src.substring(0, 60))}${img.src.length > 60 ? '...' : ''}</div>
+        ${img.hasAlt 
+          ? `<div class="image-alt">Alt: "${escapeHtml(img.alt)}"</div>` 
+          : `<div class="image-alt image-alt-missing">⚠️ Missing alt text</div>`
+        }
+        ${img.width && img.height ? `<div class="image-size">Size: ${img.width}x${img.height}px</div>` : ''}
+      </div>
+    `).join('');
+
+    imagesList.innerHTML = imagesHtml + 
+      (totalImages > 50 ? `<p class="text-center" style="margin-top: 12px; color: var(--muted-foreground);">Showing first 50 of ${totalImages} images</p>` : '');
   }
 
   function displayContent(data) {
@@ -837,8 +1050,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const contentData = data.contentData;
+    
+    // Calculate text-to-link ratio
+    const linksCount = data.links ? data.links.total : 0;
+    const textToLinkRatio = linksCount > 0 ? Math.round(contentData.wordCount / linksCount) : contentData.wordCount;
+    
+    // Calculate reading time
+    const readingTime = Math.ceil(contentData.wordCount / AVERAGE_READING_SPEED);
 
-    // Статистика контента
+    // Статистика контента с дополнительными метриками
     contentOverview.innerHTML = `
       <div class="content-stat">
         <span class="content-stat-value">${contentData.wordCount || 0}</span>
@@ -855,6 +1075,14 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="content-stat">
         <span class="content-stat-value">${contentData.sentenceCount || 0}</span>
         <span class="content-stat-label">Sentences</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${textToLinkRatio}</span>
+        <span class="content-stat-label">Words/Link</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${readingTime}</span>
+        <span class="content-stat-label">Min Read</span>
       </div>
     `;
 
@@ -932,6 +1160,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // Добавляем детальные данные для новых табов
       headingsList: [],
       linksList: [],
+      imagesList: [],
       contentData: {
         wordCount: 0,
         charCount: 0,
@@ -949,13 +1178,24 @@ document.addEventListener('DOMContentLoaded', function () {
       data.metaDescription = metaDesc.getAttribute('content') || '';
     }
 
-    // Analyze images
+    // Analyze images with detailed information
     const images = document.querySelectorAll('img');
     data.images.total = images.length;
     images.forEach(img => {
-      if (!img.hasAttribute('alt') || img.getAttribute('alt').trim() === '') {
+      const alt = img.getAttribute('alt') || '';
+      const hasAlt = alt.trim() !== '';
+      
+      if (!hasAlt) {
         data.images.missingAlt++;
       }
+      
+      data.imagesList.push({
+        src: img.src || img.getAttribute('src') || '',
+        alt: alt,
+        hasAlt: hasAlt,
+        width: img.width || 0,
+        height: img.height || 0
+      });
     });
 
     // Extract detailed headings

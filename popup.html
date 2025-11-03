@@ -41,7 +41,9 @@
       <button class="tab-button active" data-tab="seo">SEO</button>
       <button class="tab-button" data-tab="headings">Headings</button>
       <button class="tab-button" data-tab="links">Links</button>
+      <button class="tab-button" data-tab="images">Images</button>
       <button class="tab-button" data-tab="content">Content</button>
+      <button class="tab-button" data-tab="robots">Robots</button>
     </div>
 
     <div id="results" class="results">
@@ -131,6 +133,32 @@
       <div id="links-tab" class="tab-content">
         <div id="links-analysis"></div>
         <div id="tags-cloud"></div>
+      </div>
+
+      <!-- Images Tab -->
+      <div id="images-tab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Images Analysis</h2>
+          </div>
+          <div class="card-content">
+            <div id="images-overview"></div>
+            <div id="images-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Robots.txt Tab -->
+      <div id="robots-tab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Robots.txt Analysis</h2>
+          </div>
+          <div class="card-content">
+            <button id="analyze-robots-btn" class="analyze-btn">Analyze Robots.txt</button>
+            <div id="robots-content"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Content Analysis Tab -->

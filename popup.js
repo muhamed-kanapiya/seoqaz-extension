@@ -126,36 +126,58 @@ document.addEventListener('DOMContentLoaded', function () {
         analyzeBtn.textContent = 'Analyzing...';
       }
 
-      // Get the current tab URL
+      // Get the current tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const url = new URL(tab.url);
-      const robotsUrl = `${url.origin}/robots.txt`;
 
-      // Fetch robots.txt
-      const response = await fetch(robotsUrl);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      // Execute script in the page context to fetch robots.txt
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: async () => {
+          try {
+            const url = new URL(window.location.href);
+            const robotsUrl = `${url.origin}/robots.txt`;
+            const response = await fetch(robotsUrl);
+            
+            if (!response.ok) {
+              return { 
+                success: false, 
+                error: `HTTP ${response.status}: ${response.statusText}`,
+                url: robotsUrl
+              };
+            }
 
-      const robotsText = await response.text();
+            const text = await response.text();
+            return { success: true, text: text, url: robotsUrl };
+          } catch (error) {
+            return { success: false, error: error.message };
+          }
+        }
+      });
+
+      const data = result.result;
       
-      if (!robotsText || robotsText.trim() === '') {
+      if (!data.success) {
+        robotsContent.innerHTML = `
+          <div class="robots-error">
+            ❌ Could not fetch robots.txt
+            <div style="margin-top: 8px; font-size: 11px;">${data.error}</div>
+          </div>
+        `;
+      } else if (!data.text || data.text.trim() === '') {
         robotsContent.innerHTML = '<div class="robots-error">⚠️ Robots.txt file is empty</div>';
       } else {
         // Parse and display robots.txt with basic formatting
-        const formattedText = parseRobotsTxt(robotsText);
+        const formattedText = parseRobotsTxt(data.text);
         robotsContent.innerHTML = `
-          <div class="robots-success">✅ Robots.txt found at: ${robotsUrl}</div>
+          <div class="robots-success">✅ Robots.txt found at: ${data.url}</div>
           <div class="robots-content">${formattedText}</div>
         `;
       }
     } catch (error) {
-      console.error('Error fetching robots.txt:', error);
+      console.error('Error analyzing robots.txt:', error);
       robotsContent.innerHTML = `
         <div class="robots-error">
-          ❌ Could not fetch robots.txt
-          <div style="margin-top: 8px; font-size: 11px;">${error.message}</div>
+          ❌ Error: ${error.message}
         </div>
       `;
     } finally {
@@ -167,26 +189,33 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function parseRobotsTxt(text) {
-    // Basic parsing and formatting of robots.txt
+    // Basic parsing and formatting of robots.txt with HTML escaping
+    const escapeHtml = (str) => {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    };
+    
     const lines = text.split('\n');
     let formatted = '';
     
     lines.forEach(line => {
+      const escapedLine = escapeHtml(line);
       const trimmed = line.trim();
       if (trimmed === '') {
         formatted += '\n';
       } else if (trimmed.startsWith('#')) {
-        formatted += `<span style="color: var(--muted-foreground);">${line}</span>\n`;
+        formatted += `<span style="color: var(--muted-foreground);">${escapedLine}</span>\n`;
       } else if (trimmed.toLowerCase().startsWith('user-agent:')) {
-        formatted += `<span style="color: var(--primary); font-weight: 600;">${line}</span>\n`;
+        formatted += `<span style="color: var(--primary); font-weight: 600;">${escapedLine}</span>\n`;
       } else if (trimmed.toLowerCase().startsWith('disallow:')) {
-        formatted += `<span style="color: var(--destructive);">${line}</span>\n`;
+        formatted += `<span style="color: var(--destructive);">${escapedLine}</span>\n`;
       } else if (trimmed.toLowerCase().startsWith('allow:')) {
-        formatted += `<span style="color: var(--success);">${line}</span>\n`;
+        formatted += `<span style="color: var(--success);">${escapedLine}</span>\n`;
       } else if (trimmed.toLowerCase().startsWith('sitemap:')) {
-        formatted += `<span style="color: var(--primary);">${line}</span>\n`;
+        formatted += `<span style="color: var(--primary);">${escapedLine}</span>\n`;
       } else {
-        formatted += `${line}\n`;
+        formatted += `${escapedLine}\n`;
       }
     });
     

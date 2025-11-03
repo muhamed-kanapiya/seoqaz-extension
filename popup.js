@@ -309,7 +309,11 @@ document.addEventListener('DOMContentLoaded', function () {
       
       // Add drag icon to header
       const dragIcon = document.createElement('span');
-      dragIcon.innerHTML = '<i class="fas fa-grip-vertical" style="margin-right: 8px; color: var(--muted-foreground);"></i>';
+      const iconElement = document.createElement('i');
+      iconElement.className = 'fas fa-grip-vertical';
+      iconElement.style.marginRight = '8px';
+      iconElement.style.color = 'var(--muted-foreground)';
+      dragIcon.appendChild(iconElement);
       dragIcon.style.opacity = '0.6';
       dragIcon.setAttribute('aria-label', 'Drag to reorder');
       dragIcon.setAttribute('role', 'img');
@@ -362,10 +366,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Drag leave event
     element.addEventListener('dragleave', function(e) {
-      // Only remove styling if we're actually leaving the element (not moving to a child)
-      if (e.relatedTarget && !this.contains(e.relatedTarget)) {
-        this.classList.remove('drag-over');
-      }
+      // Use a small timeout to handle edge cases where relatedTarget might be null
+      // but we've actually left the element
+      const self = this;
+      setTimeout(() => {
+        // Only remove styling if we're actually leaving the element (not moving to a child)
+        if (e.relatedTarget && !self.contains(e.relatedTarget)) {
+          self.classList.remove('drag-over');
+        } else if (!e.relatedTarget) {
+          // Fallback: if relatedTarget is null, check if we're still over the element
+          self.classList.remove('drag-over');
+        }
+      }, 10);
     });
 
     // Drop event
@@ -381,8 +393,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const droppedIndex = Array.from(parent.children).indexOf(this);
         
         if (draggedIndex < droppedIndex) {
-          parent.insertBefore(currentlyDraggedElement, this.nextSibling);
+          // Insert after the drop target
+          const nextSibling = this.nextSibling;
+          if (nextSibling) {
+            parent.insertBefore(currentlyDraggedElement, nextSibling);
+          } else {
+            parent.appendChild(currentlyDraggedElement);
+          }
         } else {
+          // Insert before the drop target
           parent.insertBefore(currentlyDraggedElement, this);
         }
         

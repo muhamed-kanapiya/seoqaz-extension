@@ -285,12 +285,122 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  // Enable drag and drop functionality for an element
+  function enableDragAndDrop(element) {
+    console.log('[SEOQaz Debug] Enabling drag and drop for element:', element);
+    
+    if (!element) {
+      console.warn('[SEOQaz Debug] Cannot enable drag and drop: element is null');
+      return;
+    }
+
+    // Make the element draggable
+    element.setAttribute('draggable', 'true');
+    element.style.cursor = 'move';
+    
+    // Add visual indicator that element is draggable
+    const cardHeader = element.querySelector('.card-header');
+    if (cardHeader) {
+      cardHeader.style.cursor = 'move';
+      cardHeader.title = 'Drag to reorder';
+      
+      // Add drag icon to header
+      const dragIcon = document.createElement('span');
+      dragIcon.innerHTML = '<i class="fas fa-grip-vertical" style="margin-right: 8px; color: var(--muted-foreground);"></i>';
+      dragIcon.style.opacity = '0.6';
+      const titleElement = cardHeader.querySelector('.card-title');
+      if (titleElement) {
+        cardHeader.insertBefore(dragIcon, titleElement);
+      }
+    }
+
+    let draggedElement = null;
+
+    // Drag start event
+    element.addEventListener('dragstart', function(e) {
+      console.log('[SEOQaz Debug] Drag started');
+      draggedElement = this;
+      this.style.opacity = '0.5';
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', this.innerHTML);
+    });
+
+    // Drag end event
+    element.addEventListener('dragend', function(e) {
+      console.log('[SEOQaz Debug] Drag ended');
+      this.style.opacity = '1';
+      
+      // Remove drag over styling from all cards
+      document.querySelectorAll('.card').forEach(card => {
+        card.classList.remove('drag-over');
+      });
+    });
+
+    // Drag over event - allow drop
+    element.addEventListener('dragover', function(e) {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      e.dataTransfer.dropEffect = 'move';
+      
+      // Add visual feedback
+      if (draggedElement !== this) {
+        this.classList.add('drag-over');
+      }
+      return false;
+    });
+
+    // Drag enter event
+    element.addEventListener('dragenter', function(e) {
+      if (draggedElement !== this) {
+        this.classList.add('drag-over');
+      }
+    });
+
+    // Drag leave event
+    element.addEventListener('dragleave', function(e) {
+      this.classList.remove('drag-over');
+    });
+
+    // Drop event
+    element.addEventListener('drop', function(e) {
+      console.log('[SEOQaz Debug] Drop event triggered');
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+
+      // Don't do anything if dropping the same card
+      if (draggedElement !== this) {
+        // Swap the dragged element with this element
+        const parent = this.parentNode;
+        const draggedIndex = Array.from(parent.children).indexOf(draggedElement);
+        const droppedIndex = Array.from(parent.children).indexOf(this);
+        
+        if (draggedIndex < droppedIndex) {
+          parent.insertBefore(draggedElement, this.nextSibling);
+        } else {
+          parent.insertBefore(draggedElement, this);
+        }
+        
+        console.log('[SEOQaz Debug] Elements reordered');
+      }
+
+      this.classList.remove('drag-over');
+      return false;
+    });
+  }
+
   // Функция отображения результатов SERP
   function displaySERPResults(data) {
+    console.log('[SEOQaz Debug] Displaying SERP results with data:', data);
     const serpSection = document.getElementById('serp-section');
     const serpInfo = document.getElementById('serp-info');
 
-    if (serpSection) serpSection.classList.remove('hidden');
+    if (serpSection) {
+      serpSection.classList.remove('hidden');
+      // Enable drag and drop for SERP section
+      enableDragAndDrop(serpSection);
+    }
 
     if (data.results && data.results.length > 0) {
       let html = `<div class="metric-row">
@@ -639,6 +749,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   async function analyzePage() {
+    console.log('[SEOQaz Debug] Starting page analysis...');
     // Show loading state
     if (loading) loading.classList.remove('hidden');
     if (results) results.classList.add('hidden');
@@ -646,17 +757,21 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       // Get the active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      console.log('[SEOQaz Debug] Active tab retrieved:', tab?.url);
 
       // Check for restricted URLs
       if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || 
           tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
+        console.error('[SEOQaz Debug] Restricted URL detected:', tab.url);
         throw new Error('Cannot access chrome://, edge://, about:, or extension pages');
       }
 
       // Check if it's a Google search page
       const isGoogleSearch = tab.url && tab.url.includes('google.com/search');
+      console.log('[SEOQaz Debug] Is Google Search page:', isGoogleSearch);
 
       if (isGoogleSearch) {
+        console.log('[SEOQaz Debug] Injecting SERP analysis script...');
         // Inject SERP analysis script
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
@@ -664,6 +779,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
 
+      console.log('[SEOQaz Debug] Executing content script...');
       // Execute the content script to get SEO data
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -671,16 +787,26 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       const seoData = result.result;
-      console.log('Received SEO data:', seoData);
+      console.log('[SEOQaz Debug] Received SEO data:', seoData);
+      console.log('[SEOQaz Debug] Tab URL:', tab.url);
 
       // Сохраняем данные для поиска, включая URL
-      window.currentPageData = seoData;
-      window.currentPageData.url = tab.url;
+      // Fix: Check if seoData is valid before assigning properties
+      if (seoData && typeof seoData === 'object') {
+        window.currentPageData = seoData;
+        window.currentPageData.url = tab.url;
+        console.log('[SEOQaz Debug] Page data saved successfully');
+      } else {
+        console.warn('[SEOQaz Debug] Invalid seoData received, using empty object');
+        window.currentPageData = { url: tab.url };
+      }
 
       // Display the results
       if (isGoogleSearch) {
+        console.log('[SEOQaz Debug] Displaying SERP results...');
         displaySERPResults(seoData);
       } else {
+        console.log('[SEOQaz Debug] Displaying SEO results...');
         // Проверяем, что данные не пустые
         if (seoData && seoData.title) {
           displayResults(seoData);
@@ -689,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function () {
           displayContent(seoData);
           displayImages(seoData);
         } else {
-          console.warn('No valid SEO data received, using mock data');
+          console.warn('[SEOQaz Debug] No valid SEO data received, using mock data');
           displayMockData();
         }
       }
@@ -708,7 +834,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }, 200);
 
     } catch (error) {
-      console.error('Error analyzing page:', error);
+      console.error('[SEOQaz Debug] Error analyzing page:', error);
+      console.error('[SEOQaz Debug] Error stack:', error.stack);
       
       // Show user-friendly error message
       if (results) {

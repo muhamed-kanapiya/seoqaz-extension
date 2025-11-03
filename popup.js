@@ -30,6 +30,40 @@ const STOP_WORDS = new Set([
   'үшін', 'мұнда', 'онда', 'бар', 'жоқ', 'дейін', 'кейін', 'артық', 'кем'
 ]);
 
+// Reusable function to attach copy functionality to copy buttons
+function attachCopyHandlers(container) {
+  container.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const text = this.getAttribute('data-text');
+      navigator.clipboard.writeText(text).then(() => {
+        const icon = this.querySelector('i');
+        icon.classList.remove('fa-copy');
+        icon.classList.add('fa-check');
+        this.classList.add('copied');
+        
+        setTimeout(() => {
+          icon.classList.remove('fa-check');
+          icon.classList.add('fa-copy');
+          this.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy text:', err);
+        // Show error feedback
+        const icon = this.querySelector('i');
+        icon.classList.remove('fa-copy');
+        icon.classList.add('fa-times');
+        this.style.background = 'var(--destructive)';
+        
+        setTimeout(() => {
+          icon.classList.remove('fa-times');
+          icon.classList.add('fa-copy');
+          this.style.background = '';
+        }, 2000);
+      });
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
@@ -768,36 +802,7 @@ document.addEventListener('DOMContentLoaded', function () {
     `).join('');
 
     // Add copy functionality
-    headingsStructure.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const text = this.getAttribute('data-text');
-        navigator.clipboard.writeText(text).then(() => {
-          const icon = this.querySelector('i');
-          icon.classList.remove('fa-copy');
-          icon.classList.add('fa-check');
-          this.classList.add('copied');
-          
-          setTimeout(() => {
-            icon.classList.remove('fa-check');
-            icon.classList.add('fa-copy');
-            this.classList.remove('copied');
-          }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy text:', err);
-          // Show error feedback
-          const icon = this.querySelector('i');
-          icon.classList.remove('fa-copy');
-          icon.classList.add('fa-times');
-          this.style.background = 'var(--destructive)';
-          
-          setTimeout(() => {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-copy');
-            this.style.background = '';
-          }, 2000);
-        });
-      });
-    });
+    attachCopyHandlers(headingsStructure);
   }
 
   // Функция для отображения тестовых ссылок
@@ -951,36 +956,7 @@ document.addEventListener('DOMContentLoaded', function () {
     `).join('');
 
     // Add copy functionality
-    headingsStructure.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const text = this.getAttribute('data-text');
-        navigator.clipboard.writeText(text).then(() => {
-          const icon = this.querySelector('i');
-          icon.classList.remove('fa-copy');
-          icon.classList.add('fa-check');
-          this.classList.add('copied');
-          
-          setTimeout(() => {
-            icon.classList.remove('fa-check');
-            icon.classList.add('fa-copy');
-            this.classList.remove('copied');
-          }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy text:', err);
-          // Show error feedback
-          const icon = this.querySelector('i');
-          icon.classList.remove('fa-copy');
-          icon.classList.add('fa-times');
-          this.style.background = 'var(--destructive)';
-          
-          setTimeout(() => {
-            icon.classList.remove('fa-times');
-            icon.classList.add('fa-copy');
-            this.style.background = '';
-          }, 2000);
-        });
-      });
-    });
+    attachCopyHandlers(headingsStructure);
   }
 
   function displayLinks(data) {

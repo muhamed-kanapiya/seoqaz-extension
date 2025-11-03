@@ -72,6 +72,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Variable to track the currently dragged element across all drag operations
   let currentlyDraggedElement = null;
+  
+  // Constants for drag and drop behavior
+  const DRAG_LEAVE_TIMEOUT = 10; // ms - small delay to handle edge cases with relatedTarget
 
   // Функция поиска слов - объявляем в глобальной области видимости
   function performWordSearch() {
@@ -329,8 +332,9 @@ document.addEventListener('DOMContentLoaded', function () {
       currentlyDraggedElement = this;
       this.style.opacity = '0.5';
       e.dataTransfer.effectAllowed = 'move';
-      // Use a simple identifier instead of HTML content
-      e.dataTransfer.setData('text/plain', this.id || 'draggable-element');
+      // Use a unique identifier for the dragged element
+      const elementId = this.id || ('draggable-element-' + Date.now());
+      e.dataTransfer.setData('text/plain', elementId);
     });
 
     // Drag end event
@@ -377,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function () {
           // Fallback: if relatedTarget is null, check if we're still over the element
           self.classList.remove('drag-over');
         }
-      }, 10);
+      }, DRAG_LEAVE_TIMEOUT);
     });
 
     // Drop event
@@ -393,13 +397,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const droppedIndex = Array.from(parent.children).indexOf(this);
         
         if (draggedIndex < droppedIndex) {
-          // Insert after the drop target
-          const nextSibling = this.nextSibling;
-          if (nextSibling) {
-            parent.insertBefore(currentlyDraggedElement, nextSibling);
-          } else {
-            parent.appendChild(currentlyDraggedElement);
-          }
+          // Insert after the drop target - insertBefore with null nextSibling acts like appendChild
+          parent.insertBefore(currentlyDraggedElement, this.nextSibling);
         } else {
           // Insert before the drop target
           parent.insertBefore(currentlyDraggedElement, this);

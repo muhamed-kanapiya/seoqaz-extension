@@ -5,6 +5,7 @@
   --border: #e5e5e5;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
+  --primary-light: rgba(37, 99, 235, 0.05);
   --muted: #f8f9fa;
   --muted-foreground: #6b7280;
   --success: #10b981;
@@ -274,7 +275,7 @@ h1 {
 
 .card.drag-over {
   border: 2px dashed var(--primary);
-  background: rgba(37, 99, 235, 0.05);
+  background: var(--primary-light);
   transform: scale(1.02);
 }
 

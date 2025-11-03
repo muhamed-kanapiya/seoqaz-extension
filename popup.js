@@ -70,6 +70,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const themeToggle = document.getElementById('theme-toggle');
   const body = document.body;
 
+  // Variable to track the currently dragged element across all drag operations
+  let currentlyDraggedElement = null;
+
   // Функция поиска слов - объявляем в глобальной области видимости
   function performWordSearch() {
     const searchInput = document.getElementById('word-search-input');
@@ -308,27 +311,29 @@ document.addEventListener('DOMContentLoaded', function () {
       const dragIcon = document.createElement('span');
       dragIcon.innerHTML = '<i class="fas fa-grip-vertical" style="margin-right: 8px; color: var(--muted-foreground);"></i>';
       dragIcon.style.opacity = '0.6';
+      dragIcon.setAttribute('aria-label', 'Drag to reorder');
+      dragIcon.setAttribute('role', 'img');
       const titleElement = cardHeader.querySelector('.card-title');
       if (titleElement) {
         cardHeader.insertBefore(dragIcon, titleElement);
       }
     }
 
-    let draggedElement = null;
-
     // Drag start event
     element.addEventListener('dragstart', function(e) {
       console.log('[SEOQaz Debug] Drag started');
-      draggedElement = this;
+      currentlyDraggedElement = this;
       this.style.opacity = '0.5';
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/html', this.innerHTML);
+      // Use a simple identifier instead of HTML content
+      e.dataTransfer.setData('text/plain', this.id || 'draggable-element');
     });
 
     // Drag end event
     element.addEventListener('dragend', function(e) {
       console.log('[SEOQaz Debug] Drag ended');
       this.style.opacity = '1';
+      currentlyDraggedElement = null;
       
       // Remove drag over styling from all cards
       document.querySelectorAll('.card').forEach(card => {
@@ -338,13 +343,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Drag over event - allow drop
     element.addEventListener('dragover', function(e) {
-      if (e.preventDefault) {
-        e.preventDefault();
-      }
+      e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       
       // Add visual feedback
-      if (draggedElement !== this) {
+      if (currentlyDraggedElement !== this) {
         this.classList.add('drag-over');
       }
       return false;
@@ -352,34 +355,35 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Drag enter event
     element.addEventListener('dragenter', function(e) {
-      if (draggedElement !== this) {
+      if (currentlyDraggedElement !== this) {
         this.classList.add('drag-over');
       }
     });
 
     // Drag leave event
     element.addEventListener('dragleave', function(e) {
-      this.classList.remove('drag-over');
+      // Only remove styling if we're actually leaving the element (not moving to a child)
+      if (e.relatedTarget && !this.contains(e.relatedTarget)) {
+        this.classList.remove('drag-over');
+      }
     });
 
     // Drop event
     element.addEventListener('drop', function(e) {
       console.log('[SEOQaz Debug] Drop event triggered');
-      if (e.stopPropagation) {
-        e.stopPropagation();
-      }
+      e.stopPropagation();
 
       // Don't do anything if dropping the same card
-      if (draggedElement !== this) {
+      if (currentlyDraggedElement !== this) {
         // Swap the dragged element with this element
         const parent = this.parentNode;
-        const draggedIndex = Array.from(parent.children).indexOf(draggedElement);
+        const draggedIndex = Array.from(parent.children).indexOf(currentlyDraggedElement);
         const droppedIndex = Array.from(parent.children).indexOf(this);
         
         if (draggedIndex < droppedIndex) {
-          parent.insertBefore(draggedElement, this.nextSibling);
+          parent.insertBefore(currentlyDraggedElement, this.nextSibling);
         } else {
-          parent.insertBefore(draggedElement, this);
+          parent.insertBefore(currentlyDraggedElement, this);
         }
         
         console.log('[SEOQaz Debug] Elements reordered');

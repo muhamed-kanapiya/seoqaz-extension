@@ -945,7 +945,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (tagsCloud) {
       const linkTexts = data.linksList.map(link => link.text.toLowerCase()).join(' ');
       // Поддержка английского, русского и казахского языков
-      const words = linkTexts.match(/\b[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}\b/g) || [];
+      const words = linkTexts.match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
       const wordCount = {};
 
       words.forEach(word => {
@@ -1317,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Используем более точные регулярные выражения для слов
     // Поддержка английского, русского и казахского языков
     const words = textContent.toLowerCase()
-      .match(/\b[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}\b/g) || []; // Только слова длиной 3+ символа
+      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || []; // Только слова длиной 3+ символа
 
     // Фильтруем стоп-слова
     const stopWords = new Set([

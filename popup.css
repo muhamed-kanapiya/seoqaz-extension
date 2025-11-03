@@ -66,10 +66,14 @@ body {
   gap: 6px;
 }
 
+/* Logo and Icons */
 .logo-icon {
   color: var(--primary);
-  width: 20px;
-  height: 20px;
+  font-size: 20px;
+}
+
+.sun-icon, .moon-icon {
+  font-size: 16px;
 }
 
 h1 {
@@ -90,10 +94,85 @@ h1 {
   border: 1px solid var(--border);
   cursor: pointer;
   color: var(--foreground);
+  transition: all 0.15s ease;
 }
 
 .icon-button:hover {
   background: var(--muted);
+  border-color: var(--primary);
+}
+
+.icon-button:active {
+  transform: scale(0.95);
+}
+
+/* Filter Button */
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-btn:hover {
+  background: var(--muted);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.filter-btn:active {
+  transform: scale(0.95);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+/* Copy Button */
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0;
+  margin-left: 8px;
+}
+
+.copy-btn:hover {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+
+.copy-btn:active {
+  transform: scale(0.9);
+}
+
+.copy-btn.copied {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
+.heading-item:hover .copy-btn {
+  opacity: 1;
 }
 
 .hidden {
@@ -173,13 +252,19 @@ h1 {
   display: block;
 }
 
-/* Cards - Simplified */
+/* Cards - shadcn style */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-bottom: 12px;
   overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
@@ -268,6 +353,15 @@ h1 {
   background: var(--muted);
   border-radius: 4px;
   border-left: 3px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.heading-item:hover {
+  background: var(--background);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .heading-h1 {
@@ -310,6 +404,7 @@ h1 {
 .heading-text {
   color: var(--foreground);
   font-weight: 500;
+  flex: 1;
 }
 
 /* Links Analysis - Simplified */
@@ -515,11 +610,13 @@ h1 {
   background: var(--background);
   color: var(--foreground);
   font-size: 13px;
+  transition: border-color 0.15s ease;
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .search-btn {
@@ -531,6 +628,17 @@ h1 {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.search-btn:active {
+  transform: translateY(0);
 }
 
 /* Word Tab Content */
@@ -640,6 +748,20 @@ h1 {
   background: var(--muted);
   border-radius: 4px;
   align-items: flex-start;
+  transition: all 0.15s ease;
+}
+
+.image-item:hover {
+  background: var(--background);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.image-item.small-image {
+  display: none;
+}
+
+.image-item.small-image.show {
+  display: flex;
 }
 
 .image-preview {

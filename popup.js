@@ -944,7 +944,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Облако тегов из текста ссылок
     if (tagsCloud) {
       const linkTexts = data.linksList.map(link => link.text.toLowerCase()).join(' ');
-      const words = linkTexts.match(/\b\w{3,}\b/g) || [];
+      // Поддержка английского, русского и казахского языков
+      // Note: \b word boundaries don't work with Cyrillic/Kazakh characters in JavaScript
+      const words = linkTexts.match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
       const wordCount = {};
 
       words.forEach(word => {
@@ -1022,6 +1024,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const imagesToShow = images.slice(0, 50);
     const imagesHtml = imagesToShow.map((img, index) => `
       <div class="image-item ${img.hasAlt ? 'has-alt' : 'no-alt'}">
+        <img src="${escapeHtml(img.src)}" class="image-preview" alt="Image preview ${index + 1}" onerror="this.style.display='none'">
         <div class="image-url">Image #${index + 1}: ${escapeHtml(img.src.substring(0, 60))}${img.src.length > 60 ? '...' : ''}</div>
         ${img.hasAlt 
           ? `<div class="image-alt">Alt: "${escapeHtml(img.alt)}"</div>` 
@@ -1313,8 +1316,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Улучшенный анализ контента
     // Используем более точные регулярные выражения для слов
+    // Поддержка английского, русского и казахского языков
+    // Note: \b word boundaries don't work with Cyrillic/Kazakh characters in JavaScript
     const words = textContent.toLowerCase()
-      .match(/\b[a-zA-Zа-яё]{3,}\b/g) || []; // Только слова длиной 3+ символа
+      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || []; // Только слова длиной 3+ символа
 
     // Фильтруем стоп-слова
     const stopWords = new Set([

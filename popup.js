@@ -945,6 +945,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (tagsCloud) {
       const linkTexts = data.linksList.map(link => link.text.toLowerCase()).join(' ');
       // Поддержка английского, русского и казахского языков
+      // Note: \b word boundaries don't work with Cyrillic/Kazakh characters in JavaScript
       const words = linkTexts.match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || [];
       const wordCount = {};
 
@@ -1316,6 +1317,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Улучшенный анализ контента
     // Используем более точные регулярные выражения для слов
     // Поддержка английского, русского и казахского языков
+    // Note: \b word boundaries don't work with Cyrillic/Kazakh characters in JavaScript
     const words = textContent.toLowerCase()
       .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || []; // Только слова длиной 3+ символа
 

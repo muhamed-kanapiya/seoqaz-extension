@@ -1313,7 +1313,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // This function runs in the context of the web page
   function extractSEOData() {
-    console.log('Extracting SEO data from page...');
+    console.log('[SEOQaz Debug] Extracting SEO data from page...');
+    console.log('[SEOQaz Debug] Page URL:', window.location.href);
+    console.log('[SEOQaz Debug] Page title:', document.title);
     
     const data = {
       title: document.title || '',
@@ -1355,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     };
 
-    console.log('Initial data object created');
+    console.log('[SEOQaz Debug] Initial data object created');
 
     // Get meta description
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -1366,7 +1368,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Analyze images
     const images = document.querySelectorAll('img');
     data.images.total = images.length;
-    console.log('Found', images.length, 'images');
+    console.log('[SEOQaz Debug] Found', images.length, 'images');
 
     images.forEach(img => {
       const alt = img.getAttribute('alt');
@@ -1386,7 +1388,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Extract detailed headings
     const headingElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    console.log('Found', headingElements.length, 'headings');
+    console.log('[SEOQaz Debug] Found', headingElements.length, 'headings');
     
     headingElements.forEach(heading => {
       data.headingsList.push({
@@ -1399,7 +1401,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const links = document.querySelectorAll('a[href]');
     data.links.total = links.length;
     const currentDomain = window.location.hostname;
-    console.log('Found', links.length, 'links');
+    console.log('[SEOQaz Debug] Found', links.length, 'links');
 
     links.forEach(link => {
       const href = link.getAttribute('href');
@@ -1434,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Extract and analyze page content
     function extractTextContent() {
-      console.log('Extracting text content...');
+      console.log('[SEOQaz Debug] Extracting text content...');
       
       // Создаем копию body для безопасной работы
       const bodyClone = document.body.cloneNode(true);
@@ -1455,7 +1457,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .replace(/\t+/g, ' ')  // Заменяем табы на пробелы
         .trim();
 
-      console.log('Extracted text length:', fullText.length);
+      console.log('[SEOQaz Debug] Extracted text length:', fullText.length);
       return fullText;
     }
 
@@ -1469,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const stopWords = STOP_WORDS;
 
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
-    console.log('Filtered words count:', filteredWords.length);
+    console.log('[SEOQaz Debug] Filtered words count:', filteredWords.length);
 
     data.contentData.wordCount = filteredWords.length;
     data.contentData.charCount = textContent.length;
@@ -1545,13 +1547,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const ogUrl = document.querySelector('meta[property="og:url"]');
     if (ogUrl) data.openGraph.url = ogUrl.getAttribute('content') || '';
 
-    console.log('SEO data extraction completed:', data);
+    console.log('[SEOQaz Debug] SEO data extraction completed:', data);
     return data;
   }
 
   // Extract Google SERP data
   function extractGoogleSERPData() {
-    console.log('Extracting Google SERP data...');
+    console.log('[SEOQaz Debug] Extracting Google SERP data...');
     
     const data = {
       query: '',
@@ -1593,15 +1595,20 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
 
-    console.log('Extracted SERP data:', data);
+    console.log('[SEOQaz Debug] Extracted SERP data:', data);
     return data;
   }
 
   // Функция для инъекции SERP анализа
   function injectSERPAnalysis() {
+    console.log('[SEOQaz Debug] Injecting SERP analysis into page...');
     // Проверяем, не инъектирован ли уже скрипт
-    if (window.serpAnalysisInjected) return;
+    if (window.serpAnalysisInjected) {
+      console.log('[SEOQaz Debug] SERP analysis already injected, skipping');
+      return;
+    }
     window.serpAnalysisInjected = true;
+    console.log('[SEOQaz Debug] SERP analysis injection starting...');
 
     // SERP элементы для определения
     const serpFeatures = {
@@ -1820,7 +1827,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Обновляем функцию извлечения данных
   function extractSEOData() {
-    console.log('Extracting SEO data from page...');
+    console.log('[SEOQaz Debug] Extracting SEO data from page...');
     
     const data = {
       title: document.title || '',
@@ -1862,7 +1869,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     };
 
-    console.log('Initial data object created');
+    console.log('[SEOQaz Debug] Initial data object created');
 
     // Get meta description
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -1873,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Analyze images
     const images = document.querySelectorAll('img');
     data.images.total = images.length;
-    console.log('Found', images.length, 'images');
+    console.log('[SEOQaz Debug] Found', images.length, 'images');
 
     images.forEach(img => {
       const alt = img.getAttribute('alt');
@@ -1893,7 +1900,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Extract detailed headings
     const headingElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    console.log('Found', headingElements.length, 'headings');
+    console.log('[SEOQaz Debug] Found', headingElements.length, 'headings');
     
     headingElements.forEach(heading => {
       data.headingsList.push({
@@ -1906,7 +1913,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const links = document.querySelectorAll('a[href]');
     data.links.total = links.length;
     const currentDomain = window.location.hostname;
-    console.log('Found', links.length, 'links');
+    console.log('[SEOQaz Debug] Found', links.length, 'links');
 
     links.forEach(link => {
       const href = link.getAttribute('href');
@@ -1941,7 +1948,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Extract and analyze page content
     function extractTextContent() {
-      console.log('Extracting text content...');
+      console.log('[SEOQaz Debug] Extracting text content...');
       
       // Создаем копию body для безопасной работы
       const bodyClone = document.body.cloneNode(true);
@@ -1962,7 +1969,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .replace(/\t+/g, ' ')  // Заменяем табы на пробелы
         .trim();
 
-      console.log('Extracted text length:', fullText.length);
+      console.log('[SEOQaz Debug] Extracted text length:', fullText.length);
       return fullText;
     }
 
@@ -1976,7 +1983,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const stopWords = STOP_WORDS;
 
     const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
-    console.log('Filtered words count:', filteredWords.length);
+    console.log('[SEOQaz Debug] Filtered words count:', filteredWords.length);
 
     data.contentData.wordCount = filteredWords.length;
     data.contentData.charCount = textContent.length;
@@ -2052,7 +2059,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const ogUrl = document.querySelector('meta[property="og:url"]');
     if (ogUrl) data.openGraph.url = ogUrl.getAttribute('content') || '';
 
-    console.log('SEO data extraction completed:', data);
+    console.log('[SEOQaz Debug] SEO data extraction completed:', data);
     return data;
   }
 });

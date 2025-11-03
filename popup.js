@@ -1,20 +1,9 @@
 // SEO Analysis Script for Popup
 document.addEventListener('DOMContentLoaded', function () {
-  // Constants
-  const AVERAGE_READING_SPEED = 200; // words per minute
-  
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
   const themeToggle = document.getElementById('theme-toggle');
   const body = document.body;
-
-  // Utility function to escape HTML
-  function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    const div = document.createElement('div');
-    div.textContent = String(text);
-    return div.innerHTML;
-  }
 
   // Функция поиска слов - объявляем в глобальной области видимости
   function performWordSearch() {
@@ -72,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (results.length > 0) {
         searchResultsList.innerHTML = results.slice(0, 10).map(item => `
           <div class="word-item">
-            <span class="word-text">${escapeHtml(item.word)}</span>
+            <span class="word-text">${item.word}</span>
             <div>
               <span class="word-count">${item.count}</span>
               <span class="word-percentage">${item.percentage}%</span>
@@ -85,9 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       // Fallback к mock данным
       const mockResults = [
-        { word: escapeHtml(searchTerm), count: 5, percentage: 0.4 },
-        { word: escapeHtml(searchTerm) + ' optimization', count: 3, percentage: 0.24 },
-        { word: 'best ' + escapeHtml(searchTerm), count: 2, percentage: 0.16 }
+        { word: searchTerm, count: 5, percentage: 0.4 },
+        { word: searchTerm + ' optimization', count: 3, percentage: 0.24 },
+        { word: 'best ' + searchTerm, count: 2, percentage: 0.16 }
       ];
 
       searchResultsList.innerHTML = mockResults.map(item => `
@@ -107,7 +96,6 @@ document.addEventListener('DOMContentLoaded', function () {
   // Инициализация
   initializeTheme();
   initializeTabs();
-  initializeRobotsAnalyzer();
 
   // Автоматический анализ страницы при загрузке
   setTimeout(() => {
@@ -118,129 +106,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 500);
   }, 100);
 
-  function initializeRobotsAnalyzer() {
-    const analyzeRobotsBtn = document.getElementById('analyze-robots-btn');
-    if (analyzeRobotsBtn) {
-      analyzeRobotsBtn.addEventListener('click', analyzeRobotsTxt);
-    }
-  }
-
-  async function analyzeRobotsTxt() {
-    const robotsContent = document.getElementById('robots-content');
-    const analyzeBtn = document.getElementById('analyze-robots-btn');
-    
-    if (!robotsContent) return;
-
-    try {
-      if (analyzeBtn) {
-        analyzeBtn.disabled = true;
-        analyzeBtn.textContent = 'Analyzing...';
-      }
-
-      // Get the current tab
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      // Execute script in the page context to fetch robots.txt
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: async () => {
-          try {
-            const url = new URL(window.location.href);
-            const robotsUrl = `${url.origin}/robots.txt`;
-            const response = await fetch(robotsUrl);
-            
-            if (!response.ok) {
-              return { 
-                success: false, 
-                error: `HTTP ${response.status}: ${response.statusText}`,
-                url: robotsUrl
-              };
-            }
-
-            const text = await response.text();
-            return { success: true, text: text, url: robotsUrl };
-          } catch (error) {
-            return { success: false, error: error.message };
-          }
-        }
-      });
-
-      const data = result.result;
-      
-      if (!data.success) {
-        robotsContent.innerHTML = `
-          <div class="robots-error">
-            ❌ Could not fetch robots.txt
-            <div style="margin-top: 8px; font-size: 11px;">${escapeHtml(data.error)}</div>
-          </div>
-        `;
-      } else if (!data.text || data.text.trim() === '') {
-        robotsContent.innerHTML = '<div class="robots-error">⚠️ Robots.txt file is empty</div>';
-      } else {
-        // Parse and display robots.txt with basic formatting
-        const formattedText = parseRobotsTxt(data.text);
-        robotsContent.innerHTML = `
-          <div class="robots-success">✅ Robots.txt found at: ${escapeHtml(data.url)}</div>
-          <div class="robots-content">${formattedText}</div>
-        `;
-      }
-    } catch (error) {
-      console.error('Error analyzing robots.txt:', error);
-      robotsContent.innerHTML = `
-        <div class="robots-error">
-          ❌ Error: ${escapeHtml(error.message)}
-        </div>
-      `;
-    } finally {
-      if (analyzeBtn) {
-        analyzeBtn.disabled = false;
-        analyzeBtn.textContent = 'Analyze Robots.txt';
-      }
-    }
-  }
-
-  function parseRobotsTxt(text) {
-    // Basic parsing and formatting of robots.txt with HTML escaping
-    const escapeHtml = (str) => {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    };
-    
-    const lines = text.split('\n');
-    let formatted = '';
-    
-    lines.forEach(line => {
-      const escapedLine = escapeHtml(line);
-      const trimmed = line.trim();
-      if (trimmed === '') {
-        formatted += '\n';
-      } else if (trimmed.startsWith('#')) {
-        formatted += `<span style="color: var(--muted-foreground);">${escapedLine}</span>\n`;
-      } else if (trimmed.toLowerCase().startsWith('user-agent:')) {
-        formatted += `<span style="color: var(--primary); font-weight: 600;">${escapedLine}</span>\n`;
-      } else if (trimmed.toLowerCase().startsWith('disallow:')) {
-        formatted += `<span style="color: var(--destructive);">${escapedLine}</span>\n`;
-      } else if (trimmed.toLowerCase().startsWith('allow:')) {
-        formatted += `<span style="color: var(--success);">${escapedLine}</span>\n`;
-      } else if (trimmed.toLowerCase().startsWith('sitemap:')) {
-        formatted += `<span style="color: var(--primary);">${escapedLine}</span>\n`;
-      } else {
-        formatted += `${escapedLine}\n`;
-      }
-    });
-    
-    return formatted;
-  }
-
   function initializeTheme() {
     if (!themeToggle) return;
 
     const sunIcon = themeToggle.querySelector('.sun-icon');
     const moonIcon = themeToggle.querySelector('.moon-icon');
 
+    // Загружаем сохраненную тему
+    const savedTheme = localStorage.getItem('seoqaz-theme') || 'light';
+    setTheme(savedTheme);
+
     themeToggle.addEventListener('click', function () {
-      if (body.classList.contains('light')) {
+      const currentTheme = body.classList.contains('light') ? 'light' : 'dark';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      setTheme(newTheme);
+      // Сохраняем тему в localStorage
+      localStorage.setItem('seoqaz-theme', newTheme);
+    });
+
+    function setTheme(theme) {
+      if (theme === 'dark') {
         body.classList.remove('light');
         body.classList.add('dark');
         if (sunIcon) sunIcon.classList.add('hidden');
@@ -251,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (sunIcon) sunIcon.classList.remove('hidden');
         if (moonIcon) moonIcon.classList.add('hidden');
       }
-    });
+    }
   }
 
   // Переключение основных табов
@@ -644,6 +529,14 @@ document.addEventListener('DOMContentLoaded', function () {
       // Check if it's a Google search page
       const isGoogleSearch = tab.url && tab.url.includes('google.com/search');
 
+      if (isGoogleSearch) {
+        // Inject SERP analysis script
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: injectSERPAnalysis
+        });
+      }
+
       // Execute the content script to get SEO data
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -651,6 +544,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       const seoData = result.result;
+      console.log('Received SEO data:', seoData);
 
       // Сохраняем данные для поиска
       window.currentPageData = seoData;
@@ -659,11 +553,17 @@ document.addEventListener('DOMContentLoaded', function () {
       if (isGoogleSearch) {
         displaySERPResults(seoData);
       } else {
-        displayResults(seoData);
-        displayHeadings(seoData);
-        displayLinks(seoData);
-        displayImages(seoData);
-        displayContent(seoData);
+        // Проверяем, что данные не пустые
+        if (seoData && seoData.title) {
+          displayResults(seoData);
+          displayHeadings(seoData);
+          displayLinks(seoData);
+          displayContent(seoData);
+          displayImages(seoData);
+        } else {
+          console.warn('No valid SEO data received, using mock data');
+          displayMockData();
+        }
       }
 
       // Show tab navigation
@@ -981,160 +881,57 @@ document.addEventListener('DOMContentLoaded', function () {
     const imagesOverview = document.getElementById('images-overview');
     const imagesList = document.getElementById('images-list');
 
-    if (!imagesOverview || !imagesList) {
-      console.warn('Images elements not found');
-      return;
-    }
+    if (!imagesOverview || !imagesList) return;
 
     if (!data || !data.imagesList) {
-      console.warn('No images data available');
-      imagesOverview.innerHTML = '<p class="no-results">No images data available</p>';
+      imagesOverview.innerHTML = '<div class="no-results">No image data available</div>';
       return;
     }
 
-    const images = data.imagesList;
-    const totalImages = images.length;
-    const imagesWithAlt = images.filter(img => img.hasAlt).length;
-    const imagesWithoutAlt = totalImages - imagesWithAlt;
-
-    // Display overview statistics
+    // Статистика изображений
     imagesOverview.innerHTML = `
-      <div class="links-summary">
-        <div class="link-stat">
-          <span class="link-stat-value">${totalImages}</span>
-          <span class="link-stat-label">Total</span>
+      <div class="images-summary">
+        <div class="image-stat">
+          <span class="image-stat-value">${data.images.total}</span>
+          <span class="image-stat-label">Total Images</span>
         </div>
-        <div class="link-stat">
-          <span class="link-stat-value">${imagesWithAlt}</span>
-          <span class="link-stat-label">With Alt</span>
+        <div class="image-stat">
+          <span class="image-stat-value">${data.images.missingAlt}</span>
+          <span class="image-stat-label">Missing Alt</span>
         </div>
-        <div class="link-stat">
-          <span class="link-stat-value">${imagesWithoutAlt}</span>
-          <span class="link-stat-label">Missing Alt</span>
+        <div class="image-stat">
+          <span class="image-stat-value">${data.images.total - data.images.missingAlt}</span>
+          <span class="image-stat-label">With Alt</span>
         </div>
       </div>
     `;
 
-    // Display images list (limit to 50 for performance)
-    if (totalImages === 0) {
-      imagesList.innerHTML = '<p class="no-results">No images found on this page</p>';
-      return;
-    }
-
-    const imagesToShow = images.slice(0, 50);
+    // Список изображений (ограничиваем до 20)
+    const imagesToShow = data.imagesList.slice(0, 20);
     const imagesHtml = imagesToShow.map((img, index) => `
-      <div class="image-item ${img.hasAlt ? 'has-alt' : 'no-alt'}">
-        <img src="${escapeHtml(img.src)}" class="image-preview" alt="Image preview ${index + 1}" onerror="this.style.display='none'">
-        <div class="image-url">Image #${index + 1}: ${escapeHtml(img.src.substring(0, 60))}${img.src.length > 60 ? '...' : ''}</div>
-        ${img.hasAlt 
-          ? `<div class="image-alt">Alt: "${escapeHtml(img.alt)}"</div>` 
-          : `<div class="image-alt image-alt-missing">⚠️ Missing alt text</div>`
-        }
-        ${img.width && img.height ? `<div class="image-size">Size: ${img.width}x${img.height}px</div>` : ''}
+      <div class="image-item">
+        <div class="image-preview">
+          <img src="${img.src}" alt="${img.alt || 'No alt text'}" loading="lazy" 
+               onerror="this.style.display='none'" style="max-width: 60px; max-height: 60px;">
+        </div>
+        <div class="image-details">
+          <div class="image-src">${img.src}</div>
+          <div class="image-alt ${img.alt ? 'has-alt' : 'no-alt'}">
+            Alt: ${img.alt || '<em>Missing</em>'}
+          </div>
+          <div class="image-size">${img.width}x${img.height}px</div>
+        </div>
       </div>
     `).join('');
 
-    imagesList.innerHTML = imagesHtml + 
-      (totalImages > 50 ? `<p class="text-center" style="margin-top: 12px; color: var(--muted-foreground);">Showing first 50 of ${totalImages} images</p>` : '');
-  }
-
-  function displayContent(data) {
-    const contentOverview = document.getElementById('content-overview');
-
-    if (!contentOverview) {
-      console.warn('Content overview element not found');
-      return;
-    }
-
-    if (!data || !data.contentData) {
-      console.warn('No content data available, using mock data');
-      displayMockContent();
-      return;
-    }
-
-    const contentData = data.contentData;
-    
-    // Calculate text-to-link ratio
-    const linksCount = data.links ? data.links.total : 0;
-    const textToLinkRatio = linksCount > 0 ? Math.round(contentData.wordCount / linksCount) : contentData.wordCount;
-    
-    // Calculate reading time
-    const readingTime = Math.ceil(contentData.wordCount / AVERAGE_READING_SPEED);
-
-    // Статистика контента с дополнительными метриками
-    contentOverview.innerHTML = `
-      <div class="content-stat">
-        <span class="content-stat-value">${contentData.wordCount || 0}</span>
-        <span class="content-stat-label">Words</span>
-      </div>
-      <div class="content-stat">
-        <span class="content-stat-value">${contentData.charCount || 0}</span>
-        <span class="content-stat-label">Characters</span>
-      </div>
-      <div class="content-stat">
-        <span class="content-stat-value">${contentData.paragraphCount || 0}</span>
-        <span class="content-stat-label">Paragraphs</span>
-      </div>
-      <div class="content-stat">
-        <span class="content-stat-value">${contentData.sentenceCount || 0}</span>
-        <span class="content-stat-label">Sentences</span>
-      </div>
-      <div class="content-stat">
-        <span class="content-stat-value">${textToLinkRatio}</span>
-        <span class="content-stat-label">Words/Link</span>
-      </div>
-      <div class="content-stat">
-        <span class="content-stat-value">${readingTime}</span>
-        <span class="content-stat-label">Min Read</span>
-      </div>
-    `;
-
-    // Отображение списков слов
-    if (contentData.singleWords && Object.keys(contentData.singleWords).length > 0) {
-      const singleWords = Object.entries(contentData.singleWords).map(([word, wordData]) => ({
-        word: word,
-        count: wordData.count,
-        percentage: parseFloat(wordData.percentage)
-      }));
-      displayWordList('single-words-list', singleWords);
-    } else {
-      const container = document.getElementById('single-words-list');
-      if (container) {
-        container.innerHTML = '<div class="no-results">No word data available</div>';
-      }
-    }
-
-    if (contentData.doubleWords && Object.keys(contentData.doubleWords).length > 0) {
-      const doubleWords = Object.entries(contentData.doubleWords).map(([phrase, phraseData]) => ({
-        phrase: phrase,
-        count: phraseData.count,
-        percentage: parseFloat(phraseData.percentage)
-      }));
-      displayWordList('double-words-list', doubleWords);
-    } else {
-      const container = document.getElementById('double-words-list');
-      if (container) {
-        container.innerHTML = '<div class="no-results">No 2-word phrases found</div>';
-      }
-    }
-
-    if (contentData.tripleWords && Object.keys(contentData.tripleWords).length > 0) {
-      const tripleWords = Object.entries(contentData.tripleWords).map(([phrase, phraseData]) => ({
-        phrase: phrase,
-        count: phraseData.count,
-        percentage: parseFloat(phraseData.percentage)
-      }));
-      displayWordList('triple-words-list', tripleWords);
-    } else {
-      const container = document.getElementById('triple-words-list');
-      if (container) {
-        container.innerHTML = '<div class="no-results">No 3-word phrases found</div>';
-      }
-    }
+    imagesList.innerHTML = imagesHtml +
+      (data.imagesList.length > 20 ? `<p class="show-more">Showing first 20 of ${data.imagesList.length} images</p>` : '');
   }
 
   // This function runs in the context of the web page
   function extractSEOData() {
+    console.log('Extracting SEO data from page...');
+    
     const data = {
       title: document.title || '',
       metaDescription: '',
@@ -1175,34 +972,39 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     };
 
+    console.log('Initial data object created');
+
     // Get meta description
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       data.metaDescription = metaDesc.getAttribute('content') || '';
     }
 
-    // Analyze images with detailed information
+    // Analyze images
     const images = document.querySelectorAll('img');
     data.images.total = images.length;
+    console.log('Found', images.length, 'images');
+
     images.forEach(img => {
-      const alt = img.getAttribute('alt') || '';
-      const hasAlt = alt.trim() !== '';
-      
-      if (!hasAlt) {
+      const alt = img.getAttribute('alt');
+      if (!alt || alt.trim() === '') {
         data.images.missingAlt++;
       }
       
+      // Добавляем в детальный список
       data.imagesList.push({
-        src: img.src || img.getAttribute('src') || '',
-        alt: alt,
-        hasAlt: hasAlt,
-        width: img.width || 0,
-        height: img.height || 0
+        src: img.src || img.getAttribute('data-src') || '',
+        alt: alt || '',
+        width: img.naturalWidth || img.width || 0,
+        height: img.naturalHeight || img.height || 0,
+        loading: img.getAttribute('loading') || ''
       });
     });
 
     // Extract detailed headings
     const headingElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    console.log('Found', headingElements.length, 'headings');
+    
     headingElements.forEach(heading => {
       data.headingsList.push({
         level: heading.tagName.toLowerCase(),
@@ -1214,6 +1016,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const links = document.querySelectorAll('a[href]');
     data.links.total = links.length;
     const currentDomain = window.location.hostname;
+    console.log('Found', links.length, 'links');
 
     links.forEach(link => {
       const href = link.getAttribute('href');
@@ -1246,80 +1049,38 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
-    // Улучшенная функция извлечения текстового контента
+    // Extract and analyze page content
     function extractTextContent() {
-      // Создаем копию документа для безопасной работы
-      const tempDoc = document.cloneNode(true);
-
+      console.log('Extracting text content...');
+      
+      // Создаем копию body для безопасной работы
+      const bodyClone = document.body.cloneNode(true);
+      
       // Удаляем элементы, которые не содержат основной контент
-      const elementsToRemove = [
-        'script', 'style', 'noscript', 'iframe', 'object', 'embed',
-        'nav', 'header', 'footer', 'aside', 'menu',
-        '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
-        '[role="complementary"]', '[role="search"]',
-        '.advertisement', '.ads', '.ad', '.sidebar', '.navigation',
-        '.menu', '.header', '.footer', '.nav', '.breadcrumb',
-        '.social', '.share', '.comment', '.comments', '.related',
-        '.popup', '.modal', '.overlay', '.cookie', '.banner'
-      ];
+      const elementsToRemove = bodyClone.querySelectorAll(
+        'script, style, noscript, iframe, object, embed, nav, header, footer, aside, menu'
+      );
+      elementsToRemove.forEach(el => el.remove());
 
-      elementsToRemove.forEach(selector => {
-        const elements = tempDoc.querySelectorAll(selector);
-        elements.forEach(el => el.remove());
-      });
-
-      // Ищем основной контент
-      let contentElements = [];
-
-      // Попробуем найти основной контент по семантическим тегам
-      const mainContent = tempDoc.querySelector('main, [role="main"], article, .content, .main-content, #content, #main');
-
-      if (mainContent) {
-        contentElements = [mainContent];
-      } else {
-        // Если основной контент не найден, ищем параграфы и текстовые блоки
-        contentElements = Array.from(tempDoc.querySelectorAll('p, div, section, article'));
-
-        // Фильтруем элементы по количеству текста
-        contentElements = contentElements.filter(el => {
-          const text = el.textContent.trim();
-          return text.length > 50 && !el.querySelector('nav, header, footer, aside');
-        });
-      }
-
-      // Извлекаем текст из найденных элементов
-      let fullText = '';
-      contentElements.forEach(el => {
-        const text = el.textContent || el.innerText || '';
-        if (text.trim().length > 0) {
-          fullText += ' ' + text.trim();
-        }
-      });
-
-      // Если ничего не найдено, берем весь body, но очищенный
-      if (fullText.trim().length < 100) {
-        const bodyClone = tempDoc.body ? tempDoc.body.cloneNode(true) : tempDoc.documentElement;
-        if (bodyClone) {
-          fullText = bodyClone.textContent || bodyClone.innerText || '';
-        }
-      }
-
-      // Очищаем текст от лишних пробелов и символов
-      return fullText
+      // Получаем весь текст
+      let fullText = bodyClone.textContent || bodyClone.innerText || '';
+      
+      // Очищаем текст
+      fullText = fullText
         .replace(/\s+/g, ' ')  // Заменяем множественные пробелы на одиночные
         .replace(/\n+/g, ' ')  // Заменяем переносы строк на пробелы
         .replace(/\t+/g, ' ')  // Заменяем табы на пробелы
         .trim();
+
+      console.log('Extracted text length:', fullText.length);
+      return fullText;
     }
 
     const textContent = extractTextContent();
 
-    // Улучшенный анализ контента
-    // Используем более точные регулярные выражения для слов
-    // Поддержка английского, русского и казахского языков
-    // Note: \b word boundaries don't work with Cyrillic/Kazakh characters in JavaScript
+    // Анализ контента
     const words = textContent.toLowerCase()
-      .match(/[a-zA-Zа-яёӘәІіҢңҒғҮүҰұҚқӨөҺһ]{3,}/g) || []; // Только слова длиной 3+ символа
+      .match(/\b[a-zA-Zа-яё]{3,}\b/g) || [];
 
     // Фильтруем стоп-слова
     const stopWords = new Set([
@@ -1327,14 +1088,11 @@ document.addEventListener('DOMContentLoaded', function () {
       'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
       'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
       'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
-      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each',
-      'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same',
-      'so', 'than', 'too', 'very', 'just', 'now', 'get', 'go', 'see', 'make', 'come', 'know',
-      'take', 'use', 'work', 'say', 'think', 'look', 'want', 'give', 'way', 'first', 'last',
-      'new', 'good', 'high', 'old', 'great', 'right', 'public', 'man', 'woman', 'life', 'child'
+      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each'
     ]);
 
-    const filteredWords = words.filter(word => !stopWords.has(word));
+    const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
+    console.log('Filtered words count:', filteredWords.length);
 
     data.contentData.wordCount = filteredWords.length;
     data.contentData.charCount = textContent.length;
@@ -1344,14 +1102,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Count word frequencies
     const wordFreq = {};
     filteredWords.forEach(word => {
-      if (word.length > 2) { // Skip very short words
-        wordFreq[word] = (wordFreq[word] || 0) + 1;
-      }
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
     });
 
     // Get top single words
     const sortedWords = Object.entries(wordFreq)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([,a], [,b]) => b - a)
       .slice(0, 20);
 
     sortedWords.forEach(([word, count]) => {
@@ -1364,15 +1120,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Count 2-word phrases
     const doubleWordFreq = {};
     for (let i = 0; i < filteredWords.length - 1; i++) {
-      if (filteredWords[i].length > 2 && filteredWords[i + 1].length > 2) {
-        const phrase = `${filteredWords[i]} ${filteredWords[i + 1]}`;
-        doubleWordFreq[phrase] = (doubleWordFreq[phrase] || 0) + 1;
-      }
+      const phrase = `${filteredWords[i]} ${filteredWords[i + 1]}`;
+      doubleWordFreq[phrase] = (doubleWordFreq[phrase] || 0) + 1;
     }
 
     const sortedDoubleWords = Object.entries(doubleWordFreq)
-      .filter(([, count]) => count > 1) // Только фразы, встречающиеся более одного раза
-      .sort(([, a], [, b]) => b - a)
+      .filter(([,count]) => count > 1)
+      .sort(([,a], [,b]) => b - a)
       .slice(0, 15);
 
     sortedDoubleWords.forEach(([phrase, count]) => {
@@ -1385,15 +1139,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // Count 3-word phrases
     const tripleWordFreq = {};
     for (let i = 0; i < filteredWords.length - 2; i++) {
-      if (filteredWords[i].length > 2 && filteredWords[i + 1].length > 2 && filteredWords[i + 2].length > 2) {
-        const phrase = `${filteredWords[i]} ${filteredWords[i + 1]} ${filteredWords[i + 2]}`;
-        tripleWordFreq[phrase] = (tripleWordFreq[phrase] || 0) + 1;
-      }
+      const phrase = `${filteredWords[i]} ${filteredWords[i + 1]} ${filteredWords[i + 2]}`;
+      tripleWordFreq[phrase] = (tripleWordFreq[phrase] || 0) + 1;
     }
 
     const sortedTripleWords = Object.entries(tripleWordFreq)
-      .filter(([, count]) => count > 1) // Только фразы, встречающиеся более одного раза
-      .sort(([, a], [, b]) => b - a)
+      .filter(([,count]) => count > 1)
+      .sort(([,a], [,b]) => b - a)
       .slice(0, 10);
 
     sortedTripleWords.forEach(([phrase, count]) => {
@@ -1416,51 +1168,466 @@ document.addEventListener('DOMContentLoaded', function () {
     const ogUrl = document.querySelector('meta[property="og:url"]');
     if (ogUrl) data.openGraph.url = ogUrl.getAttribute('content') || '';
 
+    console.log('SEO data extraction completed:', data);
     return data;
   }
 
-  // Function to extract Google SERP data
-  function extractGoogleSERPData() {
-    const data = {
-      query: '',
-      totalResults: 0,
-      results: []
+  // Функция для инъекции SERP анализа
+  function injectSERPAnalysis() {
+    // Проверяем, не инъектирован ли уже скрипт
+    if (window.serpAnalysisInjected) return;
+    window.serpAnalysisInjected = true;
+
+    // SERP элементы для определения
+    const serpFeatures = {
+      'Featured Snippets': {
+        selectors: ['[data-attrid="FeaturedSnippet"]', '.xpdopen', '.kp-blk', '.g-blk'],
+        description: 'Concise answers pulled from websites'
+      },
+      'Top Ads': {
+        selectors: ['.ads-ad', '.uEierd', '[data-text-ad]', '.commercial-unit-desktop-top'],
+        description: 'Text-based advertisements at top'
+      },
+      'Bottom Ads': {
+        selectors: ['.commercial-unit-desktop-rhs', '.commercial-unit-desktop-bottom'],
+        description: 'Text-based advertisements at bottom'
+      },
+      'Video Carousels': {
+        selectors: ['.video-carousel', '[role="listbox"]', '.eKjLze'],
+        description: 'Collections of video results'
+      },
+      'Rich Snippets': {
+        selectors: ['.review-stars', '.rating', '.recipe', '.event'],
+        description: 'Enhanced information like reviews and ratings'
+      },
+      'Sitelinks': {
+        selectors: ['.sVXRqc', '.usJj9c', '.osl'],
+        description: 'Additional links within website results'
+      },
+      'People Also Ask': {
+        selectors: ['.related-question-pair', '.JlqpRe', '.cskcD'],
+        description: 'Related questions and answers'
+      },
+      'Local Pack': {
+        selectors: ['.VkpGBb', '.rllt__link', '.C8TUKc'],
+        description: 'Map and local business listings'
+      },
+      'Knowledge Panel': {
+        selectors: ['.kp-wholepage', '.knowledge-panel', '.xpdopen'],
+        description: 'Informative boxes about entities'
+      },
+      'Image Pack': {
+        selectors: ['.tn-images', '.bRMDJf', '.islrc'],
+        description: 'Grids of thumbnails'
+      },
+      'Top Stories': {
+        selectors: ['.F9rcV', '.CEMjEf', '.YEMaTe'],
+        description: 'News stories carousel'
+      },
+      'AI Overviews': {
+        selectors: ['.ai-overview', '.SGExMc', '.ifM9O'],
+        description: 'AI-generated summaries'
+      }
     };
 
-    // Get search query
-    const searchInput = document.querySelector('input[name="q"]');
-    if (searchInput) {
-      data.query = searchInput.value || '';
+    let counter = 1;
+    const foundFeatures = new Set();
+
+    // Функция для добавления номера к элементу
+    function addNumberToElement(element, number) {
+      if (element.querySelector('.serp-number')) return; // Уже пронумерован
+
+      const numberBadge = document.createElement('div');
+      numberBadge.className = 'serp-number';
+      numberBadge.textContent = number;
+      numberBadge.style.cssText = `
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        background: #1a73e8;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      `;
+
+      element.style.position = 'relative';
+      element.appendChild(numberBadge);
     }
 
-    // Get total results count
-    const resultStats = document.getElementById('result-stats');
-    if (resultStats) {
-      const match = resultStats.textContent.match(/[\d,]+/);
-      if (match) {
-        data.totalResults = match[0];
-      }
+    // Определяем органические результаты
+    const organicResults = document.querySelectorAll('.g:not(.ads-ad):not(.commercial-unit-desktop-top)');
+    organicResults.forEach((result, index) => {
+      addNumberToElement(result, counter++);
+    });
+
+    // Определяем SERP элементы
+    Object.entries(serpFeatures).forEach(([featureName, config]) => {
+      config.selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        if (elements.length > 0) {
+          foundFeatures.add(featureName);
+          elements.forEach(element => {
+            // Добавляем класс для идентификации
+            element.classList.add('serp-feature', featureName.toLowerCase().replace(/\s+/g, '-'));
+
+            // Добавляем номер если это не органический результат
+            if (!element.closest('.g')) {
+              addNumberToElement(element, counter++);
+            }
+          });
+        }
+      });
+    });
+
+    // Создаем панель с найденными элементами
+    const existingPanel = document.getElementById('serp-features-panel');
+    if (existingPanel) existingPanel.remove();
+
+    const featuresPanel = document.createElement('div');
+    featuresPanel.id = 'serp-features-panel';
+    featuresPanel.style.cssText = `
+      position: fixed;
+      top: 100px;
+      right: 20px;
+      width: 300px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 10000;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: arial, sans-serif;
+    `;
+
+    const panelHeader = document.createElement('div');
+    panelHeader.style.cssText = `
+      padding: 12px 16px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      color: #202124;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    `;
+    panelHeader.innerHTML = `
+      <span>SERP Features (${foundFeatures.size})</span>
+      <button id="close-serp-panel" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
+    `;
+
+    const panelContent = document.createElement('div');
+    panelContent.style.cssText = 'padding: 8px;';
+
+    if (foundFeatures.size > 0) {
+      const featuresList = Array.from(foundFeatures).map(feature => {
+        const config = serpFeatures[feature];
+        return `
+          <div style="padding: 8px; border-bottom: 1px solid #f0f0f0; cursor: pointer;" 
+               class="serp-feature-item" data-feature="${feature.toLowerCase().replace(/\s+/g, '-')}">
+            <div style="font-weight: 500; color: #1a73e8; font-size: 14px;">${feature}</div>
+            <div style="font-size: 12px; color: #5f6368; margin-top: 2px;">${config.description}</div>
+          </div>
+        `;
+      }).join('');
+      panelContent.innerHTML = featuresList;
+    } else {
+      panelContent.innerHTML = '<div style="padding: 16px; text-align: center; color: #5f6368;">No special SERP features detected</div>';
     }
 
-    // Extract organic search results
-    const searchResults = document.querySelectorAll('div.g, div[data-sokoban-container]');
+    featuresPanel.appendChild(panelHeader);
+    featuresPanel.appendChild(panelContent);
+    document.body.appendChild(featuresPanel);
 
-    searchResults.forEach((result, index) => {
-      if (index >= 10) return; // Limit to top 10
+    // Обработчики событий
+    document.getElementById('close-serp-panel').addEventListener('click', () => {
+      featuresPanel.remove();
+    });
 
-      const titleElement = result.querySelector('h3');
-      const linkElement = result.querySelector('a');
-      const snippetElement = result.querySelector('div[data-sncf], div.VwiC3b, span.aCOpRe');
-
-      if (titleElement || linkElement) {
-        data.results.push({
-          title: titleElement ? titleElement.textContent : '',
-          url: linkElement ? linkElement.href : '',
-          snippet: snippetElement ? snippetElement.textContent : ''
+    // Подсветка элементов при наведении
+    document.querySelectorAll('.serp-feature-item').forEach(item => {
+      item.addEventListener('mouseenter', () => {
+        const featureClass = item.dataset.feature;
+        document.querySelectorAll(`.${featureClass}`).forEach(el => {
+          el.style.outline = '2px solid #1a73e8';
+          el.style.backgroundColor = 'rgba(26, 115, 232, 0.1)';
         });
+      });
+
+      item.addEventListener('mouseleave', () => {
+        const featureClass = item.dataset.feature;
+        document.querySelectorAll(`.${featureClass}`).forEach(el => {
+          el.style.outline = '';
+          el.style.backgroundColor = '';
+        });
+      });
+    });
+
+    // Закрытие панели при клике вне её
+    document.addEventListener('click', (e) => {
+      if (!featuresPanel.contains(e.target)) {
+        featuresPanel.style.display = 'none';
       }
     });
 
+    // Кнопка для показа/скрытия панели
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'q') {
+        e.preventDefault();
+        featuresPanel.style.display = featuresPanel.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  }
+
+  // Обновляем функцию извлечения данных
+  function extractSEOData() {
+    console.log('Extracting SEO data from page...');
+    
+    const data = {
+      title: document.title || '',
+      metaDescription: '',
+      headings: {
+        h1: document.querySelectorAll('h1').length,
+        h2: document.querySelectorAll('h2').length,
+        h3: document.querySelectorAll('h3').length,
+        h4: document.querySelectorAll('h4').length
+      },
+      images: {
+        total: 0,
+        missingAlt: 0
+      },
+      links: {
+        total: 0,
+        internal: 0,
+        external: 0,
+        nofollow: 0
+      },
+      openGraph: {
+        title: '',
+        description: '',
+        image: '',
+        url: ''
+      },
+      // Добавляем детальные данные для новых табов
+      headingsList: [],
+      linksList: [],
+      imagesList: [],
+      contentData: {
+        wordCount: 0,
+        charCount: 0,
+        paragraphCount: 0,
+        sentenceCount: 0,
+        singleWords: {},
+        doubleWords: {},
+        tripleWords: {}
+      }
+    };
+
+    console.log('Initial data object created');
+
+    // Get meta description
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      data.metaDescription = metaDesc.getAttribute('content') || '';
+    }
+
+    // Analyze images
+    const images = document.querySelectorAll('img');
+    data.images.total = images.length;
+    console.log('Found', images.length, 'images');
+
+    images.forEach(img => {
+      const alt = img.getAttribute('alt');
+      if (!alt || alt.trim() === '') {
+        data.images.missingAlt++;
+      }
+      
+      // Добавляем в детальный список
+      data.imagesList.push({
+        src: img.src || img.getAttribute('data-src') || '',
+        alt: alt || '',
+        width: img.naturalWidth || img.width || 0,
+        height: img.naturalHeight || img.height || 0,
+        loading: img.getAttribute('loading') || ''
+      });
+    });
+
+    // Extract detailed headings
+    const headingElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    console.log('Found', headingElements.length, 'headings');
+    
+    headingElements.forEach(heading => {
+      data.headingsList.push({
+        level: heading.tagName.toLowerCase(),
+        text: heading.textContent.trim()
+      });
+    });
+
+    // Analyze links
+    const links = document.querySelectorAll('a[href]');
+    data.links.total = links.length;
+    const currentDomain = window.location.hostname;
+    console.log('Found', links.length, 'links');
+
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href) return;
+
+      let linkType = 'internal';
+      try {
+        const url = new URL(href, window.location.href);
+        if (url.hostname === currentDomain) {
+          data.links.internal++;
+          linkType = 'internal';
+        } else {
+          data.links.external++;
+          linkType = 'external';
+        }
+      } catch (e) {
+        // Invalid URL, treat as internal
+        data.links.internal++;
+      }
+
+      if (link.getAttribute('rel') === 'nofollow') {
+        data.links.nofollow++;
+      }
+
+      // Add to detailed links list
+      data.linksList.push({
+        url: href,
+        text: link.textContent.trim(),
+        type: linkType
+      });
+    });
+
+    // Extract and analyze page content
+    function extractTextContent() {
+      console.log('Extracting text content...');
+      
+      // Создаем копию body для безопасной работы
+      const bodyClone = document.body.cloneNode(true);
+      
+      // Удаляем элементы, которые не содержат основной контент
+      const elementsToRemove = bodyClone.querySelectorAll(
+        'script, style, noscript, iframe, object, embed, nav, header, footer, aside, menu'
+      );
+      elementsToRemove.forEach(el => el.remove());
+
+      // Получаем весь текст
+      let fullText = bodyClone.textContent || bodyClone.innerText || '';
+      
+      // Очищаем текст
+      fullText = fullText
+        .replace(/\s+/g, ' ')  // Заменяем множественные пробелы на одиночные
+        .replace(/\n+/g, ' ')  // Заменяем переносы строк на пробелы
+        .replace(/\t+/g, ' ')  // Заменяем табы на пробелы
+        .trim();
+
+      console.log('Extracted text length:', fullText.length);
+      return fullText;
+    }
+
+    const textContent = extractTextContent();
+
+    // Анализ контента
+    const words = textContent.toLowerCase()
+      .match(/\b[a-zA-Zа-яё]{3,}\b/g) || [];
+
+    // Фильтруем стоп-слова
+    const stopWords = new Set([
+      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+      'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+      'can', 'may', 'might', 'must', 'shall', 'it', 'its', 'he', 'she', 'we', 'they',
+      'our', 'your', 'his', 'her', 'them', 'us', 'me', 'you', 'him', 'all', 'any', 'each'
+    ]);
+
+    const filteredWords = words.filter(word => !stopWords.has(word) && word.length > 2);
+    console.log('Filtered words count:', filteredWords.length);
+
+    data.contentData.wordCount = filteredWords.length;
+    data.contentData.charCount = textContent.length;
+    data.contentData.paragraphCount = document.querySelectorAll('p').length;
+    data.contentData.sentenceCount = (textContent.match(/[.!?]+/g) || []).length;
+
+    // Count word frequencies
+    const wordFreq = {};
+    filteredWords.forEach(word => {
+      wordFreq[word] = (wordFreq[word] || 0) + 1;
+    });
+
+    // Get top single words
+    const sortedWords = Object.entries(wordFreq)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 20);
+
+    sortedWords.forEach(([word, count]) => {
+      data.contentData.singleWords[word] = {
+        count: count,
+        percentage: ((count / filteredWords.length) * 100).toFixed(2)
+      };
+    });
+
+    // Count 2-word phrases
+    const doubleWordFreq = {};
+    for (let i = 0; i < filteredWords.length - 1; i++) {
+      const phrase = `${filteredWords[i]} ${filteredWords[i + 1]}`;
+      doubleWordFreq[phrase] = (doubleWordFreq[phrase] || 0) + 1;
+    }
+
+    const sortedDoubleWords = Object.entries(doubleWordFreq)
+      .filter(([,count]) => count > 1)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 15);
+
+    sortedDoubleWords.forEach(([phrase, count]) => {
+      data.contentData.doubleWords[phrase] = {
+        count: count,
+        percentage: ((count / (filteredWords.length - 1)) * 100).toFixed(2)
+      };
+    });
+
+    // Count 3-word phrases
+    const tripleWordFreq = {};
+    for (let i = 0; i < filteredWords.length - 2; i++) {
+      const phrase = `${filteredWords[i]} ${filteredWords[i + 1]} ${filteredWords[i + 2]}`;
+      tripleWordFreq[phrase] = (tripleWordFreq[phrase] || 0) + 1;
+    }
+
+    const sortedTripleWords = Object.entries(tripleWordFreq)
+      .filter(([,count]) => count > 1)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10);
+
+    sortedTripleWords.forEach(([phrase, count]) => {
+      data.contentData.tripleWords[phrase] = {
+        count: count,
+        percentage: ((count / (filteredWords.length - 2)) * 100).toFixed(2)
+      };
+    });
+
+    // Get Open Graph tags
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) data.openGraph.title = ogTitle.getAttribute('content') || '';
+
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) data.openGraph.description = ogDesc.getAttribute('content') || '';
+
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage) data.openGraph.image = ogImage.getAttribute('content') || '';
+
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) data.openGraph.url = ogUrl.getAttribute('content') || '';
+
+    console.log('SEO data extraction completed:', data);
     return data;
   }
 });

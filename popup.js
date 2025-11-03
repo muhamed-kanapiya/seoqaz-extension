@@ -1,4 +1,18 @@
 // SEO Analysis Script for Popup
+
+// Utility function to escape HTML - defined globally
+function escapeHtml(text) {
+  if (!text) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
@@ -299,6 +313,9 @@ document.addEventListener('DOMContentLoaded', function () {
       `;
     }
 
+    // Display Google Snippet Preview
+    displayGoogleSnippetPreview(data);
+
     // Title Tag Analysis
     const titleInfo = document.getElementById('title-info');
     if (titleInfo) {
@@ -517,6 +534,59 @@ document.addEventListener('DOMContentLoaded', function () {
     return '❌ Poor SEO';
   }
 
+  // Display Google SERP snippet preview
+  function displayGoogleSnippetPreview(data) {
+    const snippetPreview = document.getElementById('google-snippet-preview');
+    if (!snippetPreview) return;
+
+    const title = data.title || '';
+    const metaDescription = data.metaDescription || '';
+    const currentUrl = window.currentPageData?.url || 'https://example.com';
+
+    // Extract domain from URL
+    let domain = 'example.com';
+    let breadcrumb = '';
+    try {
+      const urlObj = new URL(currentUrl);
+      domain = urlObj.hostname.replace('www.', '');
+      breadcrumb = urlObj.pathname !== '/' ? ' › ...' : '';
+    } catch (e) {
+      // Invalid URL, use default
+    }
+
+    // Truncate title and description as Google does
+    const displayTitle = title.length > 60 ? title.substring(0, 60) + '...' : title;
+    const displayDescription = metaDescription.length > 160 ? metaDescription.substring(0, 160) + '...' : metaDescription;
+
+    // Check for warnings
+    let warnings = [];
+    if (title.length === 0) {
+      warnings.push('⚠️ Missing title - Google will generate one automatically');
+    } else if (title.length > 60) {
+      warnings.push('⚠️ Title is too long and will be truncated in search results');
+    } else if (title.length < 30) {
+      warnings.push('⚠️ Title is too short - consider making it more descriptive');
+    }
+
+    if (metaDescription.length === 0) {
+      warnings.push('⚠️ Missing meta description - Google will generate one from page content');
+    } else if (metaDescription.length > 160) {
+      warnings.push('⚠️ Description is too long and will be truncated in search results');
+    } else if (metaDescription.length < 120) {
+      warnings.push('⚠️ Description is too short - you have more space to describe your page');
+    }
+
+    snippetPreview.innerHTML = `
+      <div class="snippet-url">
+        <span class="snippet-domain">${escapeHtml(domain)}</span>
+        <span class="snippet-breadcrumb">${escapeHtml(breadcrumb)}</span>
+      </div>
+      <div class="snippet-title">${escapeHtml(displayTitle || 'Your Page Title')}</div>
+      <div class="snippet-description">${escapeHtml(displayDescription || 'Your meta description will appear here...')}</div>
+      ${warnings.length > 0 ? warnings.map(w => `<div class="snippet-warning">${w}</div>`).join('') : ''}
+    `;
+  }
+
   async function analyzePage() {
     // Show loading state
     if (loading) loading.classList.remove('hidden');
@@ -525,6 +595,12 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       // Get the active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+      // Check for restricted URLs
+      if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || 
+          tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
+        throw new Error('Cannot access chrome://, edge://, about:, or extension pages');
+      }
 
       // Check if it's a Google search page
       const isGoogleSearch = tab.url && tab.url.includes('google.com/search');
@@ -546,8 +622,9 @@ document.addEventListener('DOMContentLoaded', function () {
       const seoData = result.result;
       console.log('Received SEO data:', seoData);
 
-      // Сохраняем данные для поиска
+      // Сохраняем данные для поиска, включая URL
       window.currentPageData = seoData;
+      window.currentPageData.url = tab.url;
 
       // Display the results
       if (isGoogleSearch) {
@@ -581,8 +658,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     } catch (error) {
       console.error('Error analyzing page:', error);
-      // Показываем тестовые данные при ошибке
-      displayMockData();
+      
+      // Show user-friendly error message
+      if (results) {
+        results.innerHTML = `
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Error</h2>
+            </div>
+            <div class="card-content">
+              <p class="status-error">❌ ${error.message}</p>
+              <p style="margin-top: 12px; color: hsl(var(--muted-foreground));">
+                ${error.message.includes('chrome://') ? 
+                  'This extension cannot analyze browser internal pages (chrome://, edge://, etc.). Please navigate to a regular webpage.' :
+                  'Unable to analyze this page. Please try refreshing the page or navigating to a different website.'}
+              </p>
+            </div>
+          </div>
+        `;
+      }
 
       if (loading) loading.classList.add('hidden');
       if (results) results.classList.remove('hidden');
@@ -911,13 +1005,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const imagesHtml = imagesToShow.map((img, index) => `
       <div class="image-item">
         <div class="image-preview">
-          <img src="${img.src}" alt="${img.alt || 'No alt text'}" loading="lazy" 
-               onerror="this.style.display='none'" style="max-width: 60px; max-height: 60px;">
+          <img src="${escapeHtml(img.src)}" alt="${escapeHtml(img.alt || 'No alt text')}" loading="lazy" 
+               class="preview-img" style="max-width: 60px; max-height: 60px;">
         </div>
         <div class="image-details">
-          <div class="image-src">${img.src}</div>
+          <div class="image-src">${escapeHtml(img.src)}</div>
           <div class="image-alt ${img.alt ? 'has-alt' : 'no-alt'}">
-            Alt: ${img.alt || '<em>Missing</em>'}
+            Alt: ${img.alt ? escapeHtml(img.alt) : '<em>Missing</em>'}
           </div>
           <div class="image-size">${img.width}x${img.height}px</div>
         </div>
@@ -926,6 +1020,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
     imagesList.innerHTML = imagesHtml +
       (data.imagesList.length > 20 ? `<p class="show-more">Showing first 20 of ${data.imagesList.length} images</p>` : '');
+
+    // Add error handlers to images
+    imagesList.querySelectorAll('.preview-img').forEach(img => {
+      img.addEventListener('error', function() {
+        this.style.display = 'none';
+      });
+    });
+  }
+
+  // Display content analysis
+  function displayContent(data) {
+    const contentOverview = document.getElementById('content-overview');
+    if (!contentOverview) return;
+
+    if (!data || !data.contentData) {
+      console.warn('No content data available');
+      return;
+    }
+
+    const contentData = data.contentData;
+    const readingTime = Math.ceil(contentData.wordCount / 200); // Average reading speed
+
+    contentOverview.innerHTML = `
+      <div class="content-stat">
+        <span class="content-stat-value">${contentData.wordCount || 0}</span>
+        <span class="content-stat-label">Words</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${contentData.charCount || 0}</span>
+        <span class="content-stat-label">Characters</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${contentData.paragraphCount || 0}</span>
+        <span class="content-stat-label">Paragraphs</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${contentData.sentenceCount || 0}</span>
+        <span class="content-stat-label">Sentences</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${readingTime}</span>
+        <span class="content-stat-label">Min Read</span>
+      </div>
+    `;
+
+    // Display word lists
+    if (contentData.singleWords) {
+      const singleWordsList = Object.entries(contentData.singleWords).map(([word, data]) => ({
+        word: word,
+        count: data.count,
+        percentage: parseFloat(data.percentage)
+      }));
+      displayWordList('single-words-list', singleWordsList);
+    }
+
+    if (contentData.doubleWords) {
+      const doubleWordsList = Object.entries(contentData.doubleWords).map(([phrase, data]) => ({
+        phrase: phrase,
+        count: data.count,
+        percentage: parseFloat(data.percentage)
+      }));
+      displayWordList('double-words-list', doubleWordsList);
+    }
+
+    if (contentData.tripleWords) {
+      const tripleWordsList = Object.entries(contentData.tripleWords).map(([phrase, data]) => ({
+        phrase: phrase,
+        count: data.count,
+        percentage: parseFloat(data.percentage)
+      }));
+      displayWordList('triple-words-list', tripleWordsList);
+    }
   }
 
   // This function runs in the context of the web page
@@ -1172,6 +1338,54 @@ document.addEventListener('DOMContentLoaded', function () {
     return data;
   }
 
+  // Extract Google SERP data
+  function extractGoogleSERPData() {
+    console.log('Extracting Google SERP data...');
+    
+    const data = {
+      query: '',
+      totalResults: 0,
+      results: []
+    };
+
+    // Extract search query
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+      data.query = searchInput.value;
+    }
+
+    // Extract total results count
+    const resultStats = document.querySelector('#result-stats');
+    if (resultStats) {
+      const statsText = resultStats.textContent;
+      const match = statsText.match(/[\d,]+/);
+      if (match) {
+        data.totalResults = match[0].replace(/,/g, '');
+      }
+    }
+
+    // Extract organic search results
+    const searchResults = document.querySelectorAll('.g:not(.ads-ad)');
+    
+    searchResults.forEach((result, index) => {
+      const titleElement = result.querySelector('h3');
+      const linkElement = result.querySelector('a');
+      const snippetElement = result.querySelector('.VwiC3b, .yXK7lf, .lEBKkf');
+      
+      if (titleElement && linkElement) {
+        data.results.push({
+          position: index + 1,
+          title: titleElement.textContent.trim(),
+          url: linkElement.href,
+          snippet: snippetElement ? snippetElement.textContent.trim() : ''
+        });
+      }
+    });
+
+    console.log('Extracted SERP data:', data);
+    return data;
+  }
+
   // Функция для инъекции SERP анализа
   function injectSERPAnalysis() {
     // Проверяем, не инъектирован ли уже скрипт
@@ -1296,14 +1510,14 @@ document.addEventListener('DOMContentLoaded', function () {
     featuresPanel.style.cssText = `
       position: fixed;
       top: 100px;
-      right: 20px;
-      width: 300px;
+      left: 20px;
+      width: 280px;
       background: white;
       border: 1px solid #ddd;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       z-index: 10000;
-      max-height: 400px;
+      max-height: 500px;
       overflow-y: auto;
       font-family: arial, sans-serif;
     `;
@@ -1318,10 +1532,13 @@ document.addEventListener('DOMContentLoaded', function () {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     `;
     panelHeader.innerHTML = `
       <span>SERP Features (${foundFeatures.size})</span>
-      <button id="close-serp-panel" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
+      <button id="close-serp-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; line-height: 1; color: #5f6368;">×</button>
     `;
 
     const panelContent = document.createElement('div');
@@ -1348,9 +1565,12 @@ document.addEventListener('DOMContentLoaded', function () {
     document.body.appendChild(featuresPanel);
 
     // Обработчики событий
-    document.getElementById('close-serp-panel').addEventListener('click', () => {
-      featuresPanel.remove();
-    });
+    const closeBtn = document.getElementById('close-serp-panel');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        featuresPanel.remove();
+      });
+    }
 
     // Подсветка элементов при наведении
     document.querySelectorAll('.serp-feature-item').forEach(item => {

@@ -8,6 +8,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const themeToggle = document.getElementById('theme-toggle');
   const body = document.body;
 
+  // Utility function to escape HTML
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
+
   // Функция поиска слов - объявляем в глобальной области видимости
   function performWordSearch() {
     const searchInput = document.getElementById('word-search-input');
@@ -64,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (results.length > 0) {
         searchResultsList.innerHTML = results.slice(0, 10).map(item => `
           <div class="word-item">
-            <span class="word-text">${item.word}</span>
+            <span class="word-text">${escapeHtml(item.word)}</span>
             <div>
               <span class="word-count">${item.count}</span>
               <span class="word-percentage">${item.percentage}%</span>
@@ -77,9 +85,9 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       // Fallback к mock данным
       const mockResults = [
-        { word: searchTerm, count: 5, percentage: 0.4 },
-        { word: searchTerm + ' optimization', count: 3, percentage: 0.24 },
-        { word: 'best ' + searchTerm, count: 2, percentage: 0.16 }
+        { word: escapeHtml(searchTerm), count: 5, percentage: 0.4 },
+        { word: escapeHtml(searchTerm) + ' optimization', count: 3, percentage: 0.24 },
+        { word: 'best ' + escapeHtml(searchTerm), count: 2, percentage: 0.16 }
       ];
 
       searchResultsList.innerHTML = mockResults.map(item => `
@@ -163,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
         robotsContent.innerHTML = `
           <div class="robots-error">
             ❌ Could not fetch robots.txt
-            <div style="margin-top: 8px; font-size: 11px;">${data.error}</div>
+            <div style="margin-top: 8px; font-size: 11px;">${escapeHtml(data.error)}</div>
           </div>
         `;
       } else if (!data.text || data.text.trim() === '') {
@@ -172,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Parse and display robots.txt with basic formatting
         const formattedText = parseRobotsTxt(data.text);
         robotsContent.innerHTML = `
-          <div class="robots-success">✅ Robots.txt found at: ${data.url}</div>
+          <div class="robots-success">✅ Robots.txt found at: ${escapeHtml(data.url)}</div>
           <div class="robots-content">${formattedText}</div>
         `;
       }
@@ -180,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
       console.error('Error analyzing robots.txt:', error);
       robotsContent.innerHTML = `
         <div class="robots-error">
-          ❌ Error: ${error.message}
+          ❌ Error: ${escapeHtml(error.message)}
         </div>
       `;
     } finally {
@@ -861,7 +869,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     container.innerHTML = words.map(item => `
       <div class="word-item">
-        <span class="word-text">${item.word || item.phrase}</span>
+        <span class="word-text">${escapeHtml(item.word || item.phrase)}</span>
         <div>
           <span class="word-count">${item.count}</span>
           <span class="word-percentage">${item.percentage}%</span>
@@ -883,9 +891,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     headingsStructure.innerHTML = data.headingsList.map(heading => `
-      <div class="heading-item heading-${heading.level}">
-        <span class="heading-level">${heading.level.toUpperCase()}</span>
-        <span class="heading-text">${heading.text}</span>
+      <div class="heading-item heading-${escapeHtml(heading.level)}">
+        <span class="heading-level">${escapeHtml(heading.level).toUpperCase()}</span>
+        <span class="heading-text">${escapeHtml(heading.text)}</span>
       </div>
     `).join('');
   }
@@ -924,9 +932,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const linksToShow = data.linksList.slice(0, 20);
     const linksHtml = linksToShow.map(link => `
       <div class="link-item">
-        <a href="${link.url}" class="link-url" target="_blank">${link.url}</a>
-        <div class="link-text">${link.text}</div>
-        <span class="link-type link-${link.type}">${link.type}</span>
+        <a href="${escapeHtml(link.url)}" class="link-url" target="_blank">${escapeHtml(link.url)}</a>
+        <div class="link-text">${escapeHtml(link.text)}</div>
+        <span class="link-type link-${escapeHtml(link.type)}">${escapeHtml(link.type)}</span>
       </div>
     `).join('');
 
@@ -951,7 +959,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (sortedTags.length > 0) {
         const tagsHtml = sortedTags.map(([tag, count]) => {
           const size = Math.min(5, Math.max(1, Math.ceil(count / 2)));
-          return `<span class="tag-item tag-size-${size}">${tag}<span class="tag-count">${count}</span></span>`;
+          return `<span class="tag-item tag-size-${size}">${escapeHtml(tag)}<span class="tag-count">${count}</span></span>`;
         }).join('');
 
         tagsCloud.innerHTML = `
@@ -1014,9 +1022,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const imagesToShow = images.slice(0, 50);
     const imagesHtml = imagesToShow.map((img, index) => `
       <div class="image-item ${img.hasAlt ? 'has-alt' : 'no-alt'}">
-        <div class="image-url">Image #${index + 1}: ${img.src.substring(0, 60)}${img.src.length > 60 ? '...' : ''}</div>
+        <div class="image-url">Image #${index + 1}: ${escapeHtml(img.src.substring(0, 60))}${img.src.length > 60 ? '...' : ''}</div>
         ${img.hasAlt 
-          ? `<div class="image-alt">Alt: "${img.alt}"</div>` 
+          ? `<div class="image-alt">Alt: "${escapeHtml(img.alt)}"</div>` 
           : `<div class="image-alt image-alt-missing">⚠️ Missing alt text</div>`
         }
         ${img.width && img.height ? `<div class="image-size">Size: ${img.width}x${img.height}px</div>` : ''}

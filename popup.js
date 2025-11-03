@@ -762,7 +762,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return `<span class="tag-item tag-size-${size}">${tag}<span class="tag-count">${count}</span></span>`;
       }).join('');
 
-      tagsCloud.innerHTML = `<div class="tags-cloud">${tagsHtml}</div>`;
+      tagsCloud.innerHTML = `
+        <h3 class="section-title" style="margin-top: 16px;">Link Text Cloud</h3>
+        <div class="tags-cloud">${tagsHtml}</div>
+      `;
     }
   }
 
@@ -786,6 +789,14 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="content-stat">
           <span class="content-stat-value">89</span>
           <span class="content-stat-label">Sentences</span>
+        </div>
+        <div class="content-stat">
+          <span class="content-stat-value">38</span>
+          <span class="content-stat-label">Words/Link</span>
+        </div>
+        <div class="content-stat">
+          <span class="content-stat-value">6</span>
+          <span class="content-stat-label">Min Read</span>
         </div>
       `;
     }
@@ -911,9 +922,15 @@ document.addEventListener('DOMContentLoaded', function () {
           return `<span class="tag-item tag-size-${size}">${tag}<span class="tag-count">${count}</span></span>`;
         }).join('');
 
-        tagsCloud.innerHTML = `<div class="tags-cloud">${tagsHtml}</div>`;
+        tagsCloud.innerHTML = `
+          <h3 class="section-title" style="margin-top: 16px;">Link Text Cloud</h3>
+          <div class="tags-cloud">${tagsHtml}</div>
+        `;
       } else {
-        tagsCloud.innerHTML = '<div class="tags-cloud-empty">No common tags found in link texts</div>';
+        tagsCloud.innerHTML = `
+          <h3 class="section-title" style="margin-top: 16px;">Link Text Cloud</h3>
+          <div class="tags-cloud-empty">No common tags found in link texts</div>
+        `;
       }
     }
   }
@@ -993,8 +1010,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const contentData = data.contentData;
+    
+    // Calculate text-to-link ratio
+    const linksCount = data.links ? data.links.total : 0;
+    const textToLinkRatio = linksCount > 0 ? Math.round(contentData.wordCount / linksCount) : contentData.wordCount;
+    
+    // Calculate reading time (average reading speed: 200 words per minute)
+    const readingTime = Math.ceil(contentData.wordCount / 200);
 
-    // Статистика контента
+    // Статистика контента с дополнительными метриками
     contentOverview.innerHTML = `
       <div class="content-stat">
         <span class="content-stat-value">${contentData.wordCount || 0}</span>
@@ -1011,6 +1035,14 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="content-stat">
         <span class="content-stat-value">${contentData.sentenceCount || 0}</span>
         <span class="content-stat-label">Sentences</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${textToLinkRatio}</span>
+        <span class="content-stat-label">Words/Link</span>
+      </div>
+      <div class="content-stat">
+        <span class="content-stat-value">${readingTime}</span>
+        <span class="content-stat-label">Min Read</span>
       </div>
     `;
 
